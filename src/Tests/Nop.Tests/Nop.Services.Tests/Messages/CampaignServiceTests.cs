@@ -93,8 +93,7 @@ public class CampaignServiceTests : BaseNopTest
             Port = 25,
             Username = "test_user",
             Password = "test_password",
-            EnableSsl = false,
-            UseDefaultCredentials = false
+            EnableSsl = false
         };
 
         var subscription = new NewsLetterSubscription { Active = true, Email = "test@test.com" };
@@ -102,7 +101,7 @@ public class CampaignServiceTests : BaseNopTest
         await _campaignService.SendCampaignAsync(campaign, emailAccount, new[] { subscription });
         _cueuedEmailRepository.Table.Count().Should().Be(1);
 
-        await _campaignService.SendCampaignAsync(campaign, emailAccount, NopTestsDefaults.AdminEmail);
+        await _campaignService.SendCampaignAsync(campaign, emailAccount, NopTestsDefaults.AdminEmail, 1);
         TestSmtpBuilder.TestSmtpClient.MessageIsSent.Should().BeTrue();
     }
 }

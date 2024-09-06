@@ -253,7 +253,7 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
                     attributeModel.Values.Add(attributeValueModel);
 
                     //display price if allowed
-                    if (await _permissionService.AuthorizeAsync(StandardPermissionProvider.DisplayPrices))
+                    if (await _permissionService.AuthorizeAsync(StandardPermission.PublicStore.DISPLAY_PRICES))
                     {
                         var (priceAdjustmentBase, _) = await _taxService.GetCheckoutAttributePriceAsync(attribute, attributeValue);
                         var priceAdjustment =
@@ -975,7 +975,7 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
 
         model.EmailWishlistEnabled = _shoppingCartSettings.EmailWishlistEnabled;
         model.IsEditable = isEditable;
-        model.DisplayAddToCart = await _permissionService.AuthorizeAsync(StandardPermissionProvider.EnableShoppingCart);
+        model.DisplayAddToCart = await _permissionService.AuthorizeAsync(StandardPermission.PublicStore.ENABLE_SHOPPING_CART);
         model.DisplayTaxShippingInfo = _catalogSettings.DisplayTaxShippingInfoWishlist;
 
         if (!cart.Any())
@@ -1035,7 +1035,7 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
 
                 //subtotal
                 var subTotalIncludingTax = await _workContext.GetTaxDisplayTypeAsync() == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal;
-                var (_, _, _, subTotalWithoutDiscountBase, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, subTotalIncludingTax);
+                var (_, _, subTotalWithoutDiscountBase, _, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, subTotalIncludingTax);
                 var subtotalBase = subTotalWithoutDiscountBase;
                 var currentCurrency = await _workContext.GetWorkingCurrencyAsync();
                 var subtotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(subtotalBase, currentCurrency);

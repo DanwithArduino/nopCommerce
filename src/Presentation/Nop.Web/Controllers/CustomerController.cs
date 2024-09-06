@@ -34,7 +34,6 @@ using Nop.Services.Messages;
 using Nop.Services.Orders;
 using Nop.Services.Security;
 using Nop.Services.Tax;
-using Nop.Web.Extensions;
 using Nop.Web.Factories;
 using Nop.Web.Framework;
 using Nop.Web.Framework.Controllers;
@@ -528,7 +527,7 @@ public partial class CustomerController : BasePublicController
         if (customer == null)
             return RedirectToRoute("Homepage");
 
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.EnableMultiFactorAuthentication, customer))
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.Security.ENABLE_MULTI_FACTOR_AUTHENTICATION, customer))
             return RedirectToRoute("Homepage");
 
         var selectedProvider = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.SelectedMultiFactorAuthenticationProviderAttribute);
@@ -921,6 +920,7 @@ public partial class CustomerController : BasePublicController
                                 Email = customerEmail,
                                 Active = isNewsletterActive,
                                 StoreId = store.Id,
+                                LanguageId = customer.LanguageId ?? store.DefaultLanguageId,
                                 CreatedOnUtc = DateTime.UtcNow
                             });
 
@@ -1313,6 +1313,7 @@ public partial class CustomerController : BasePublicController
                                 Email = customer.Email,
                                 Active = true,
                                 StoreId = store.Id,
+                                LanguageId = customer.LanguageId ?? store.DefaultLanguageId,
                                 CreatedOnUtc = DateTime.UtcNow
                             });
                         }
@@ -1890,7 +1891,7 @@ public partial class CustomerController : BasePublicController
             return RedirectToRoute("CustomerInfo");
         }
 
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.EnableMultiFactorAuthentication))
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.Security.ENABLE_MULTI_FACTOR_AUTHENTICATION))
             return RedirectToRoute("CustomerInfo");
 
         var model = new MultiFactorAuthenticationModel();
@@ -1905,7 +1906,7 @@ public partial class CustomerController : BasePublicController
         if (!await _customerService.IsRegisteredAsync(customer))
             return Challenge();
 
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.EnableMultiFactorAuthentication))
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.Security.ENABLE_MULTI_FACTOR_AUTHENTICATION))
             return RedirectToRoute("CustomerInfo");
 
         try
@@ -1967,7 +1968,7 @@ public partial class CustomerController : BasePublicController
         if (!await _customerService.IsRegisteredAsync(await _workContext.GetCurrentCustomerAsync()))
             return Challenge();
 
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.EnableMultiFactorAuthentication))
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.Security.ENABLE_MULTI_FACTOR_AUTHENTICATION))
             return RedirectToRoute("CustomerInfo");
 
         var model = new MultiFactorAuthenticationProviderModel();

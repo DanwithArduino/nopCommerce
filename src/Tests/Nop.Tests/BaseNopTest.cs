@@ -76,13 +76,14 @@ using Nop.Services.Themes;
 using Nop.Services.Topics;
 using Nop.Services.Vendors;
 using Nop.Tests.Nop.Services.Tests.ScheduleTasks;
+using Nop.Tests.Nop.Web.Tests.Public.Factories;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Framework;
 using Nop.Web.Framework.Factories;
-using Nop.Web.Framework.Models;
 using Nop.Web.Framework.Mvc.Routing;
 using Nop.Web.Framework.Themes;
 using Nop.Web.Framework.UI;
+using Nop.Web.Framework.WebOptimizer;
 using Nop.Web.Infrastructure.Installation;
 using SkiaSharp;
 using IAuthenticationService = Nop.Services.Authentication.IAuthenticationService;
@@ -100,6 +101,8 @@ public partial class BaseNopTest
         SetDataProviderType(DataProviderType.Unknown);
     }
 
+    public ServiceProvider ServiceProvider => _serviceProvider;
+
     private static void Init()
     {
         var dataProvider = _serviceProvider.GetService<IDataProviderManager>().DataProvider;
@@ -112,39 +115,37 @@ public partial class BaseNopTest
         var cultureInfo = new CultureInfo(NopCommonDefaults.DefaultLanguageCulture);
         var regionInfo = new RegionInfo(NopCommonDefaults.DefaultLanguageCulture);
 
-        _serviceProvider.GetService<IInstallationService>()
-            .InstallRequiredDataAsync(NopTestsDefaults.AdminEmail, NopTestsDefaults.AdminPassword, languagePackInfo, regionInfo, cultureInfo).Wait();
-        _serviceProvider.GetService<IInstallationService>().InstallSampleDataAsync(NopTestsDefaults.AdminEmail).Wait();
+        var installationService = _serviceProvider.GetService<IInstallationService>();
 
-        var provider = (IPermissionProvider)Activator.CreateInstance(typeof(StandardPermissionProvider));
-        EngineContext.Current.Resolve<IPermissionService>().InstallPermissionsAsync(provider).Wait();
+        installationService.InstallRequiredDataAsync(NopTestsDefaults.AdminEmail, NopTestsDefaults.AdminPassword, languagePackInfo, regionInfo, cultureInfo).Wait();
+        installationService.InstallSampleDataAsync(NopTestsDefaults.AdminEmail).Wait();
+
+        var permissionService = EngineContext.Current.Resolve<IPermissionService>();
+        permissionService.InsertPermissionsAsync().Wait();
     }
 
-    protected static T PropertiesShouldEqual<T, Tm>(T entity, Tm model, params string[] filter) where T : BaseEntity
-        where Tm : BaseNopModel
+    protected static void PropertiesShouldEqual<T1, T2>(T1 obj1, T2 obj2, params string[] filter) 
     {
-        var objectProperties = typeof(T).GetProperties();
-        var modelProperties = typeof(Tm).GetProperties();
+        var object1Properties = typeof(T1).GetProperties();
+        var object2Properties = typeof(T2).GetProperties();
 
-        foreach (var objectProperty in objectProperties)
+        foreach (var object1Property in object1Properties)
         {
-            var name = objectProperty.Name;
+            var name = object1Property.Name;
 
             if (filter.Contains(name))
                 continue;
 
-            var modelProperty = Array.Find(modelProperties, p => p.Name == name);
+            var object2Property = Array.Find(object2Properties, p => p.Name == name);
 
-            if (modelProperty == null)
+            if (object2Property == null)
                 continue;
 
-            var objectPropertyValue = objectProperty.GetValue(entity);
-            var modelPropertyValue = modelProperty.GetValue(model);
-
-            objectPropertyValue.Should().Be(modelPropertyValue, $"The property \"{typeof(T).Name}.{objectProperty.Name}\" of these objects is not equal");
+            var object1PropertyValue = object1Property.GetValue(obj1);
+            var object2PropertyValue = object2Property.GetValue(obj2);
+            
+            object1PropertyValue.Should().Be(object2PropertyValue, $"The property \"{typeof(T1).Name}.{object1Property.Name}\" of these objects is not equal");
         }
-
-        return entity;
     }
 
     static BaseNopTest()
@@ -200,7 +201,7 @@ public partial class BaseNopTest
 
         var hostApplicationLifetime = new Mock<IHostApplicationLifetime>();
         services.AddSingleton(hostApplicationLifetime.Object);
-            
+
         services.AddWebEncoders();
 
         var httpContext = new DefaultHttpContext();
@@ -235,7 +236,7 @@ public partial class BaseNopTest
 
         services.AddSingleton<ITypeFinder>(typeFinder);
         Singleton<ITypeFinder>.Instance = typeFinder;
-            
+
         //web helper
         services.AddTransient<IWebHelper, WebHelper>();
 
@@ -243,8 +244,8 @@ public partial class BaseNopTest
         services.AddTransient<IUserAgentHelper, UserAgentHelper>();
 
         //data layer
-        services.AddTransient<IDataProviderManager, TestDataProviderManager>();
-        services.AddTransient(serviceProvider =>
+        services.AddSingleton<IDataProviderManager, TestDataProviderManager>();
+        services.AddSingleton(serviceProvider =>
             serviceProvider.GetRequiredService<IDataProviderManager>().DataProvider);
 
         //repositories
@@ -372,6 +373,8 @@ public partial class BaseNopTest
         services.AddScoped<IBBCodeHelper, BBCodeHelper>();
         services.AddScoped<IHtmlFormatter, HtmlFormatter>();
 
+        services.AddScoped<INopAssetHelper, NopAssetHelper>();
+
         //slug route transformer
         services.AddSingleton<IReviewTypeService, ReviewTypeService>();
         services.AddSingleton<IEventPublisher, EventPublisher>();
@@ -400,6 +403,8 @@ public partial class BaseNopTest
         {
             services.AddTransient(setting,
                 context => context.GetRequiredService<ISettingService>().LoadSettingAsync(setting).Result);
+
+
         }
 
         //event consumers
@@ -433,6 +438,7 @@ public partial class BaseNopTest
         services.AddTransient<IStoreContext, WebStoreContext>();
         services.AddTransient<Lazy<IStoreContext>>();
         services.AddTransient<IWorkContext, WebWorkContext>();
+        services.AddTransient<Lazy<IWorkContext>>();
         services.AddTransient<IThemeContext, ThemeContext>();
         services.AddTransient<Lazy<ILocalizationService>>();
         services.AddTransient<INopHtmlHelper, NopHtmlHelper>();
@@ -445,12 +451,12 @@ public partial class BaseNopTest
         services.AddWebOptimizer();
 
         //common factories
-        services.AddTransient<IAclSupportedModelFactory, AclSupportedModelFactory>();
         services.AddTransient<IDiscountSupportedModelFactory, DiscountSupportedModelFactory>();
         services.AddTransient<ILocalizedModelFactory, LocalizedModelFactory>();
         services.AddTransient<IStoreMappingSupportedModelFactory, StoreMappingSupportedModelFactory>();
 
         //admin factories
+        services.AddTransient<IAclSupportedModelFactory, AclSupportedModelFactory>();
         services.AddTransient<IBaseAdminModelFactory, BaseAdminModelFactory>();
         services.AddTransient<IActivityLogModelFactory, ActivityLogModelFactory>();
         services.AddTransient<IAddressAttributeModelFactory, AddressAttributeModelFactory>();
@@ -484,6 +490,7 @@ public partial class BaseNopTest
         services.AddTransient<IPluginModelFactory, PluginModelFactory>();
         services.AddTransient<IPollModelFactory, PollModelFactory>();
         services.AddTransient<IProductModelFactory, ProductModelFactory>();
+        services.AddTransient<ProductModelFactoryTests.ProductModelFactoryForTest>();
         services.AddTransient<IProductAttributeModelFactory, ProductAttributeModelFactory>();
         services.AddTransient<IProductReviewModelFactory, ProductReviewModelFactory>();
         services.AddTransient<IReportModelFactory, ReportModelFactory>();
@@ -539,28 +546,14 @@ public partial class BaseNopTest
         Init();
     }
 
-    public static T GetService<T>()
+    protected static T GetService<T>()
     {
-        try
-        {
-            return _serviceProvider.GetRequiredService<T>();
-        }
-        catch (InvalidOperationException)
-        {
-            return (T)EngineContext.Current.ResolveUnregistered(typeof(T));
-        }
+        return _serviceProvider.GetRequiredService<T>();
     }
 
-    public static T GetService<T>(IServiceScope scope)
+    protected static T GetService<T>(IServiceScope scope)
     {
-        try
-        {
-            return scope.ServiceProvider.GetService<T>();
-        }
-        catch (InvalidOperationException)
-        {
-            return (T)EngineContext.Current.ResolveUnregistered(typeof(T));
-        }
+        return scope.ServiceProvider.GetService<T>();
     }
 
     public async Task TestCrud<TEntity>(TEntity baseEntity, Func<TEntity, Task> insert, TEntity updateEntity, Func<TEntity, Task> update, Func<int, Task<TEntity>> getById, Func<TEntity, TEntity, bool> equals, Func<TEntity, Task> delete) where TEntity : BaseEntity

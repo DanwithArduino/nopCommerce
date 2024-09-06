@@ -276,7 +276,7 @@ public static class BrevoDefaults
     /// <summary>
     /// Gets the marketing automation services URL
     /// </summary>
-    public static string MarketingAutomationUrl => "https://in-automate.sendinblue.com/api/v2/";
+    public static string MarketingAutomationUrl => "https://in-automate.brevo.com/api/v2/";
 
     /// <summary>
     /// Gets a key of the attribute to store template identifier
@@ -284,7 +284,7 @@ public static class BrevoDefaults
     public static string TemplateIdAttribute => "TemplateId";
 
     /// <summary>
-    /// Gets a key of the attribute to store a value indicating whether use SMS notification
+    /// Gets a key of the attribute to store a value indicating whether to use SMS notification
     /// </summary>
     public static string UseSmsAttribute => "UseSmsNotifications";
 
