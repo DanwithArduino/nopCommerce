@@ -4667,13 +4667,7 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.AppSettings.Hosting.KnownNetworks.Hint">
     <Value>Specify a list of IP CIDR notations (comma separated) to accept forwarded headers. e.g. 172.64.0.0/13,162.158.0.0/15</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.Configuration.AppSettings.Hosting.PathBase">
-    <Value>Path base</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.Configuration.AppSettings.Hosting.PathBase.Hint">
-    <Value>Ability to set a custom path base, for example domain.com/path/</Value>
-  </LocaleResource>    
+  </LocaleResource>   
   <LocaleResource Name="Admin.Configuration.AppSettings.Hosting.UseProxy">
     <Value>Use proxy servers</Value>
   </LocaleResource>
@@ -14322,6 +14316,15 @@
   <LocaleResource Name="Admin.Promotions.Discounts.Fields.UsePercentage.Hint">
     <Value>Determines whether to apply a percentage discount to the order/SKUs. If not enabled, a set value is discounted.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.Fields.Vendor">
+    <Value>Vendor</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.Fields.Vendor.Hint">
+    <Value>Choose a vendor associated with this discount. The associated vendor is given the ability to manage this discount.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.Fields.Vendor.None">
+    <Value>No vendor</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Promotions.Discounts.History">
     <Value>Usage history</Value>
   </LocaleResource>
@@ -14384,6 +14387,12 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Promotions.Discounts.List.SearchStartDate.Hint">
     <Value>The start date for the search.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.List.SearchVendor">
+    <Value>Vendor</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.List.SearchVendor.Hint">
+    <Value>Search by a specific vendor.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Promotions.Discounts.Requirements">
     <Value>Requirements</Value>
