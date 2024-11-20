@@ -6039,6 +6039,12 @@
   <LocaleResource Name="Admin.Configuration.Settings.Catalog.ExportImportSplitProductsFile.Hint">
     <Value>Check if you want to import products from individual files of the optimal size, which were automatically created from the main file. This function will help you import a large amount of data with a smaller delay.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.Catalog.ExportImportTierPrises">
+    <Value>Export/Import products with tier prices</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.Catalog.ExportImportTierPrises.Hint">
+    <Value>Check if products should be exported/imported with tier prices.</Value>
+  </LocaleResource>    
   <LocaleResource Name="Admin.Configuration.Settings.Catalog.IgnoreAcl">
     <Value>Ignore ACL rules (sitewide)</Value>
   </LocaleResource>
@@ -16386,6 +16392,18 @@
   <LocaleResource Name="Admin.Vendors.Fields.Picture.Hint">
     <Value>The vendor picture.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Vendors.Fields.PmCustomerId">
+    <Value>Customer for PM</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Vendors.Fields.PmCustomerId.Choose">
+    <Value>Choose</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Vendors.Fields.PmCustomerId.Hint">
+    <Value>Choose the customer for using private messages. Then customers will see the "Send private message" button on the vendor details page.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Vendors.Fields.PmCustomerId.Remove">
+    <Value>Remove</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Vendors.Fields.PriceFrom">
     <Value>Price 'from'</Value>
   </LocaleResource>
@@ -16436,6 +16454,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Vendors.VendorAttributes">
     <Value>Vendor attributes</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Vendors.PmCustomer.Choose">
+    <Value>Choose</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Vendors.VendorAttributes.Added">
     <Value>The new attribute has been added successfully.</Value>
@@ -19775,6 +19796,9 @@
   </LocaleResource>
   <LocaleResource Name="Security.Permission.System.ManageSystemLog">
     <Value>Admin area. System Log. Manage</Value>
+  </LocaleResource>
+  <LocaleResource Name="SendPmToVendor">
+    <Value>Send private message</Value>
   </LocaleResource>
   <LocaleResource Name="Shipping.EstimateShipping.City.Required">
     <Value>City is required</Value>
