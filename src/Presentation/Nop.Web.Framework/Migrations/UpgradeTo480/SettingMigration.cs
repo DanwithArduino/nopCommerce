@@ -1,8 +1,8 @@
 ﻿using FluentMigrator;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Tax;
-using Nop.Core.Domain.Common;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Data.Migrations;
@@ -63,9 +63,11 @@ public class SettingMigration : MigrationBase
         }
 
         //#2388
-        var exportImportTierPrisesKey = $"{nameof(CatalogSettings)}.{nameof(CatalogSettings.ExportImportTierPrises)}".ToLower();
-        if (settingService.GetSetting(exportImportTierPrisesKey) == null)
-            settingService.SetSetting(exportImportTierPrisesKey, true);
+        if (!settingService.SettingExists(catalogSettings, settings => settings.ExportImportTierPrices))
+        {
+            catalogSettings.ExportImportTierPrices = true;
+            settingService.SaveSetting(catalogSettings, settings => settings.ExportImportTierPrices);
+        }
 
         //#7228
         var adminAreaSettings = settingService.LoadSetting<AdminAreaSettings>();
@@ -73,6 +75,13 @@ public class SettingMigration : MigrationBase
         {
             adminAreaSettings.ProductsBulkEditGridPageSize = 100;
             settingService.SaveSetting(adminAreaSettings, settings => settings.ProductsBulkEditGridPageSize);
+        }
+
+        //#7244
+        if (!settingService.SettingExists(catalogSettings, settings => settings.VendorProductReviewsPageSize))
+        {
+            catalogSettings.VendorProductReviewsPageSize = 6;
+            settingService.SaveSetting(catalogSettings, settings => settings.VendorProductReviewsPageSize);
         }
     }
 

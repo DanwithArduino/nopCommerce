@@ -34,10 +34,12 @@ public partial class InstallationService
     #endregion
 
     #region Utilities
-    
+
     /// <summary>
     /// Gets default language identifier
     /// </summary>
+    /// <returns>A task that represents the asynchronous operation
+    /// The task result contains the identifier of default language</returns>
     protected virtual async Task<int> GetDefaultLanguageIdAsync()
     {
         if (_defaultLanguageId.HasValue)
@@ -53,6 +55,8 @@ public partial class InstallationService
     /// <summary>
     /// Gets default store identifier
     /// </summary>
+    /// <returns>A task that represents the asynchronous operation
+    /// The task result contains the identifier of default store</returns>
     protected virtual async Task<int> GetDefaultStoreIdAsync()
     {
         if (_defaultStoreId.HasValue)
@@ -68,6 +72,8 @@ public partial class InstallationService
     /// <summary>
     /// Gets default customer identifier
     /// </summary>
+    /// <returns>A task that represents the asynchronous operation
+    /// The task result contains the identifier of default customer</returns>
     protected virtual async Task<int> GetDefaultCustomerIdAsync()
     {
         if (_defaultCustomerId.HasValue)
@@ -483,7 +489,7 @@ public partial class InstallationService
     {
         var categoryTemplateInGridAndLines = await Table<CategoryTemplate>().FirstOrDefaultAsync(pt => pt.Name == "Products in Grid or Lines") ?? throw new Exception("Category template cannot be loaded");
 
-        async Task<Category> createCategory(string name, string imageFileName, int displayOrder, bool priceRangeFiltering = true, int parentCategoryId = 0)
+        async Task<Category> createCategory(string name, string imageFileName, int displayOrder, bool priceRangeFiltering = true, int parentCategoryId = 0, bool showOnHomepage = false)
         {
             var category = new Category
             {
@@ -498,7 +504,8 @@ public partial class InstallationService
                 Published = true,
                 DisplayOrder = displayOrder,
                 CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow
+                UpdatedOnUtc = DateTime.UtcNow,
+                ShowOnHomepage = showOnHomepage
             };
 
             if (!priceRangeFiltering)
@@ -520,7 +527,7 @@ public partial class InstallationService
 
         await _dataProvider.BulkInsertEntitiesAsync(new[] { categoryDesktops, categoryNotebooks, categorySoftware });
 
-        var categoryElectronics = await _dataProvider.InsertEntityAsync(await createCategory("Electronics", "category_electronics.jpeg", 2, false));
+        var categoryElectronics = await _dataProvider.InsertEntityAsync(await createCategory("Electronics", "category_electronics.jpeg", 2, false, showOnHomepage: true));
 
         var categoryCameraPhoto = await createCategory("Camera & photo", "category_camera_photo.jpg", 1, parentCategoryId: categoryElectronics.Id);
         var categoryCellPhones = await createCategory("Cell phones", "category_cell_phones.jpg", 2, false, categoryElectronics.Id);
@@ -528,7 +535,7 @@ public partial class InstallationService
 
         await _dataProvider.BulkInsertEntitiesAsync(new[] { categoryCameraPhoto, categoryCellPhones, categoryOthers });
 
-        var categoryApparel = await _dataProvider.InsertEntityAsync(await createCategory("Apparel", "category_apparel.jpeg", 3, false));
+        var categoryApparel = await _dataProvider.InsertEntityAsync(await createCategory("Apparel", "category_apparel.jpeg", 3, false, showOnHomepage: true));
 
         var categoryShoes = await createCategory("Shoes", "category_shoes.jpg", 1, parentCategoryId: categoryApparel.Id);
         var categoryClothing = await createCategory("Clothing", "category_clothing.jpg", 2, false, categoryApparel.Id);
@@ -536,7 +543,7 @@ public partial class InstallationService
 
         await _dataProvider.BulkInsertEntitiesAsync(new[] { categoryShoes, categoryClothing, categoryAccessories });
 
-        var categoryDigitalDownloads = await createCategory("Digital downloads", "category_digital_downloads.jpeg", 4, false);
+        var categoryDigitalDownloads = await createCategory("Digital downloads", "category_digital_downloads.jpeg", 4, false, showOnHomepage: true);
         var categoryBooks = await createCategory("Books", "category_book.jpeg", 5);
         var categoryJewelry = await createCategory("Jewelry", "category_jewelry.jpeg", 6);
         var categoryGiftCards = await createCategory("Gift Cards", "category_gift_cards.jpeg", 7, false);
