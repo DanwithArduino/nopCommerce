@@ -412,9 +412,9 @@ public partial class ProductService : IProductService
 
         var qty = -quantity;
 
-        var productInventory = _productWarehouseInventoryRepository.Table.Where(pwi => pwi.ProductId == product.Id)
+        var productInventory = await _productWarehouseInventoryRepository.Table.Where(pwi => pwi.ProductId == product.Id)
             .OrderByDescending(pwi => pwi.StockQuantity - pwi.ReservedQuantity)
-            .ToList();
+            .ToListAsync();
 
         if (productInventory.Count <= 0)
             return;
@@ -2784,18 +2784,11 @@ public partial class ProductService : IProductService
     {
         ArgumentNullException.ThrowIfNull(discount);
 
-        var mappingsWithProducts =
-            from dcm in _discountProductMappingRepository.Table
-            join p in _productRepository.Table on dcm.EntityId equals p.Id
-            where dcm.DiscountId == discount.Id
-            select new { product = p, dcm };
+        var mappingsWithProducts = await _discountProductMappingRepository.Table
+            .Where(dpm => dpm.DiscountId == discount.Id)
+            .ToListAsync();
 
-        var mappingsToDelete = new List<DiscountProductMapping>();
-        await foreach (var pdcm in mappingsWithProducts.ToAsyncEnumerable())
-        {
-            mappingsToDelete.Add(pdcm.dcm);
-        }
-        await _discountProductMappingRepository.DeleteAsync(mappingsToDelete);
+        await _discountProductMappingRepository.DeleteAsync(mappingsWithProducts);
     }
 
     /// <summary>

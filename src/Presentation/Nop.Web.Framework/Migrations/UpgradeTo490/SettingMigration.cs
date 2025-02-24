@@ -1,5 +1,9 @@
 ﻿using FluentMigrator;
+using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Media;
+using Nop.Core.Domain.Security;
+using Nop.Core.Domain.Vendors;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Data.Migrations;
@@ -25,6 +29,38 @@ public class SettingMigration : MigrationBase
         {
             adminAreaSettings.UseStickyHeaderLayout = false;
             settingService.SaveSetting(adminAreaSettings, settings => settings.UseStickyHeaderLayout);
+        }
+
+        //#7387
+        var productEditorSettings = settingService.LoadSetting<ProductEditorSettings>();
+        if (!settingService.SettingExists(productEditorSettings, settings => settings.AgeVerification))
+        {
+            productEditorSettings.AgeVerification = false;
+            settingService.SaveSetting(productEditorSettings, settings => settings.AgeVerification);
+        }
+
+        //#2184
+        var vendorSettings = settingService.LoadSetting<VendorSettings>();
+        if (!settingService.SettingExists(vendorSettings, settings => settings.MaximumProductPicturesNumber))
+        {
+            vendorSettings.MaximumProductPicturesNumber = 5;
+            settingService.SaveSetting(vendorSettings, settings => settings.MaximumProductPicturesNumber);
+        }
+
+        //#7571
+        var captchaSettings = settingService.LoadSetting<CaptchaSettings>();
+        if (!settingService.SettingExists(captchaSettings, settings => settings.ShowOnCheckGiftCardBalance))
+        {
+            captchaSettings.ShowOnCheckGiftCardBalance = true;
+            settingService.SaveSetting(captchaSettings, settings => settings.ShowOnCheckGiftCardBalance);
+        }
+
+        //#5818
+        var mediaSettings = settingService.LoadSetting<MediaSettings>();
+        if (!settingService.SettingExists(mediaSettings, settings => settings.AutoOrientImage))
+        {
+            mediaSettings.AutoOrientImage = false;
+            settingService.SaveSetting(mediaSettings, settings => settings.AutoOrientImage);
         }
     }
 
