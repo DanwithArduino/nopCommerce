@@ -1,17 +1,20 @@
 ﻿using FluentMigrator;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Security;
+using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Vendors;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Data.Migrations;
+using Nop.Services.Common;
 using Nop.Services.Configuration;
 
 namespace Nop.Web.Framework.Migrations.UpgradeTo490;
 
-[NopUpdateMigration("2024-12-01 00:00:00", "4.90", UpdateMigrationType.Settings)]
+[NopUpdateMigration("2025-02-26 00:00:00", "4.90", UpdateMigrationType.Settings)]
 public class SettingMigration : MigrationBase
 {
     /// <summary>Collect the UP migration expressions</summary>
@@ -61,6 +64,67 @@ public class SettingMigration : MigrationBase
         {
             mediaSettings.AutoOrientImage = false;
             settingService.SaveSetting(mediaSettings, settings => settings.AutoOrientImage);
+        }
+
+        //#1892
+        if (!settingService.SettingExists(adminAreaSettings, settings => settings.MinimumDropdownItemsForSearch))
+        {
+            adminAreaSettings.MinimumDropdownItemsForSearch = 50;
+            settingService.SaveSetting(adminAreaSettings, settings => settings.MinimumDropdownItemsForSearch);
+        }
+
+        //#7405
+        var catalogSettings = settingService.LoadSetting<CatalogSettings>();
+        if (!settingService.SettingExists(catalogSettings, settings => settings.ExportImportCategoryUseLimitedToStores))
+        {
+            catalogSettings.ExportImportCategoryUseLimitedToStores = false;
+            settingService.SaveSetting(catalogSettings, settings => settings.ExportImportCategoryUseLimitedToStores);
+        }
+
+        //#7477
+        var pdfSettings = settingService.LoadSetting<PdfSettings>();
+        var pdfSettingsFontFamily = settingService.GetSetting("pdfsettings.fontfamily");
+        if (pdfSettingsFontFamily is not null)
+            settingService.DeleteSetting(pdfSettingsFontFamily);
+
+        if (!settingService.SettingExists(pdfSettings, settings => settings.RtlFontName))
+        {
+            pdfSettings.RtlFontName = NopCommonDefaults.PdfRtlFontName;
+            settingService.SaveSetting(pdfSettings, settings => pdfSettings.RtlFontName);
+        }
+
+        if (!settingService.SettingExists(pdfSettings, settings => settings.LtrFontName))
+        {
+            pdfSettings.LtrFontName = NopCommonDefaults.PdfLtrFontName;
+            settingService.SaveSetting(pdfSettings, settings => pdfSettings.LtrFontName);
+        }
+
+        if (!settingService.SettingExists(pdfSettings, settings => settings.BaseFontSize))
+        {
+            pdfSettings.BaseFontSize = 10f;
+            settingService.SaveSetting(pdfSettings, settings => pdfSettings.BaseFontSize);
+        }
+
+        if (!settingService.SettingExists(pdfSettings, settings => settings.ImageTargetSize))
+        {
+            pdfSettings.ImageTargetSize = 200;
+            settingService.SaveSetting(pdfSettings, settings => pdfSettings.ImageTargetSize);
+        }
+
+        //#820
+        var currencySettings = settingService.LoadSetting<CurrencySettings>();
+        if (!settingService.SettingExists(currencySettings, settings => settings.DisplayCurrencySymbolInCurrencySelector))
+        {
+            currencySettings.DisplayCurrencySymbolInCurrencySelector = false;
+            settingService.SaveSetting(currencySettings, settings => settings.DisplayCurrencySymbolInCurrencySelector);
+        }
+
+        //#1779
+        var customerSettings = settingService.LoadSetting<CustomerSettings>();
+        if (!settingService.SettingExists(customerSettings, settings => settings.NotifyFailedLoginAttempt))
+        {
+            customerSettings.NotifyFailedLoginAttempt = false;
+            settingService.SaveSetting(customerSettings, settings => settings.NotifyFailedLoginAttempt);
         }
     }
 

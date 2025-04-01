@@ -29,7 +29,11 @@ public class LocalizationMigration : MigrationBase
             "Admin.Configuration.AppSettings.Common.PluginStaticFileExtensionsBlacklist",
             "Admin.Configuration.AppSettings.Common.PluginStaticFileExtensionsBlacklist.Hint",
             //#7590
-            "Checkout.RedirectMessage"
+            "Checkout.RedirectMessage",
+            
+            //#1779
+            "ActivityLog.PublicStore.Login",
+
         });
 
         #endregion
@@ -88,6 +92,10 @@ public class LocalizationMigration : MigrationBase
             ["Admin.Promotions.Campaigns.Copy"] = "Copy campaign",
             ["Admin.Promotions.Campaigns.Copied"] = "The campaign has been copied successfully",
 
+            //#7477
+            ["Pdf.Order"] = "Order #{0}",
+            ["Pdf.Shipment"] = "Shipment #{0}",
+
             //#5279
             ["Search.SearchInTags"] = "Search in product tags",
 
@@ -109,6 +117,24 @@ public class LocalizationMigration : MigrationBase
             ["Admin.Catalog.ProductTags.TaggedProducts"] = "Used by products",
             ["Admin.Catalog.ProductTags.TaggedProducts.Product"] = "Product",
             ["Admin.Catalog.ProductTags.TaggedProducts.Published"] = "Published",
+            
+            //#7405
+            ["Admin.Configuration.Settings.Catalog.ExportImportCategoryUseLimitedToStores"] = "Export / Import categories with \"limited to stores\"",
+            ["Admin.Configuration.Settings.Catalog.ExportImportCategoryUseLimitedToStores.Hint"] = "Check if categories should be exported / imported with \"limited to stores\" property.",
+
+            //#820
+            ["Currency.Selector.Text.Pattern"] = "{0}, {1}",
+            
+            //#5652
+            ["Admin.System.SystemInfo.DatabaseCollation"] = "Database collation",
+            ["Admin.System.SystemInfo.DatabaseCollation.Hint"] = "The collation defines the rules for sorting and comparing data.",
+
+			//#1779
+            ["ActivityLog.PublicStore.Login.Fail"] = "Public store. Customer has failed to log in: {0}",
+            ["Admin.Configuration.Settings.CustomerUser.NotifyFailedLoginAttempt"] = "Notify customers about failed login attempts",
+            ["Admin.Configuration.Settings.CustomerUser.NotifyFailedLoginAttempt.Hint"] = "Check to enable customer notifications on failed login attempts.",
+            ["ActivityLog.PublicStore.Login.Success"] = "Public store. Customer has logged in",
+
         }, languageId);
 
         #endregion
