@@ -1554,7 +1554,8 @@ public partial class InstallationService
             PhoneEnabled = true,
             PhoneRequired = true,
             FaxEnabled = true,
-            DefaultCountryId = await GetFirstEntityIdAsync<Country>(c => c.ThreeLetterIsoCode == _installationSettings.RegionInfo.ThreeLetterISORegionName)
+            DefaultCountryId = await GetFirstEntityIdAsync<Country>(c => c.ThreeLetterIsoCode == _installationSettings.RegionInfo.ThreeLetterISORegionName),
+            PrePopulateCountryByCustomer = true
         });
 
         await SaveSettingAsync(dictionary, new MediaSettings
@@ -1578,7 +1579,6 @@ public partial class InstallationService
             DefaultImageQuality = 80,
             MultipleThumbDirectories = false,
             ImportProductImagesUsingHash = true,
-            AzureCacheControlHeader = string.Empty,
             UseAbsoluteImagePath = true,
             AutoOrientImage = false,
             VideoIframeAllow = "fullscreen",
@@ -1714,7 +1714,8 @@ public partial class InstallationService
             ShowProductThumbnailInOrderDetailsPage = true,
             DisplayCustomerCurrencyOnOrders = false,
             DisplayOrderSummary = true,
-            PlaceOrderWithLock = false
+            PlaceOrderWithLock = false,
+            CustomerOrdersPageSize = 10
         });
 
         await SaveSettingAsync(dictionary, new SecuritySettings
@@ -1792,14 +1793,14 @@ public partial class InstallationService
             EuVatEnabled = isEurope,
             EuVatEnabledForGuests = false,
             EuVatRequired = false,
-            EuVatShopCountryId =
-                isEurope
-                    ? (await GetFirstEntityIdAsync<Country>(x => x.TwoLetterIsoCode == country) ?? 0)
-                    : 0,
+            EuVatShopCountryId = isEurope ? (await GetFirstEntityIdAsync<Country>(x => x.TwoLetterIsoCode == country) ?? 0) : 0,
             EuVatAllowVatExemption = true,
             EuVatUseWebService = false,
             EuVatAssumeValid = false,
             EuVatEmailAdminWhenNewVatSubmitted = false,
+            HmrcApiUrl = "https://api.service.hmrc.gov.uk",
+            HmrcClientId = string.Empty,
+            HmrcClientSecret = string.Empty,
             LogErrors = false
         });
 

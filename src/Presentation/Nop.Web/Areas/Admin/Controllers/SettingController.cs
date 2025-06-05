@@ -195,14 +195,13 @@ public partial class SettingController : BaseAdminController
                 model.CacheConfigModel.ToConfig(_appSettings.Get<CacheConfig>()),
                 model.HostingConfigModel.ToConfig(_appSettings.Get<HostingConfig>()),
                 model.DistributedCacheConfigModel.ToConfig(_appSettings.Get<DistributedCacheConfig>()),
-                model.AzureBlobConfigModel.ToConfig(_appSettings.Get<AzureBlobConfig>()),
                 model.InstallationConfigModel.ToConfig(_appSettings.Get<InstallationConfig>()),
                 model.PluginConfigModel.ToConfig(_appSettings.Get<PluginConfig>()),
                 model.CommonConfigModel.ToConfig(_appSettings.Get<CommonConfig>()),
                 model.DataConfigModel.ToConfig(_appSettings.Get<DataConfig>()),
                 model.WebOptimizerConfigModel.ToConfig(_appSettings.Get<WebOptimizerConfig>())
             };
-
+            
             await _eventPublisher.PublishAsync(new AppSettingsSavingEvent(configurations));
 
             AppSettingsHelper.SaveAppSettings(configurations, _fileProvider);
@@ -602,6 +601,9 @@ public partial class SettingController : BaseAdminController
             await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.EuVatUseWebService, model.EuVatUseWebService_OverrideForStore, storeScope, false);
             await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.EuVatAssumeValid, model.EuVatAssumeValid_OverrideForStore, storeScope, false);
             await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.EuVatEmailAdminWhenNewVatSubmitted, model.EuVatEmailAdminWhenNewVatSubmitted_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.HmrcApiUrl, model.HmrcApiUrl_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.HmrcClientId, model.HmrcClientId_OverrideForStore, storeScope, false);
+            await _settingService.SaveSettingOverridablePerStoreAsync(taxSettings, x => x.HmrcClientSecret, model.HmrcClientSecret_OverrideForStore, storeScope, false);
 
             //now clear settings cache
             await _settingService.ClearCacheAsync();

@@ -195,11 +195,6 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
             .ForMember(model => model.DistributedCacheTypeValues, options => options.Ignore());
         CreateMap<DistributedCacheConfigModel, DistributedCacheConfig>();
 
-        CreateMap<AzureBlobConfig, AzureBlobConfigModel>();
-        CreateMap<AzureBlobConfigModel, AzureBlobConfig>()
-            .ForMember(entity => entity.Enabled, options => options.Ignore())
-            .ForMember(entity => entity.DataProtectionKeysEncryptWithVault, options => options.Ignore());
-
         CreateMap<InstallationConfig, InstallationConfigModel>();
         CreateMap<InstallationConfigModel, InstallationConfig>();
 
@@ -758,7 +753,8 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
         CreateMap<AddressSettings, AddressSettingsModel>()
             .ForMember(model => model.AvailableCountries, options => options.Ignore());
         CreateMap<AddressSettingsModel, AddressSettings>()
-            .ForMember(settings => settings.PreselectCountryIfOnlyOne, options => options.Ignore());
+            .ForMember(settings => settings.PreselectCountryIfOnlyOne, options => options.Ignore())
+            .ForMember(settings => settings.PrePopulateCountryByCustomer, options => options.Ignore());
 
         CreateMap<Setting, SettingModel>()
             .ForMember(setting => setting.AvailableStores, options => options.Ignore())
@@ -1161,7 +1157,6 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
             .ForMember(model => model.AllowSVGUploads_OverrideForStore, options => options.Ignore());
         CreateMap<MediaSettingsModel, MediaSettings>()
             .ForMember(settings => settings.AutoCompleteSearchThumbPictureSize, options => options.Ignore())
-            .ForMember(settings => settings.AzureCacheControlHeader, options => options.Ignore())
             .ForMember(settings => settings.UseAbsoluteImagePath, options => options.Ignore())
             .ForMember(settings => settings.AutoOrientImage, options => options.Ignore())
             .ForMember(settings => settings.ImageSquarePictureSize, options => options.Ignore())
@@ -1369,7 +1364,8 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
             .ForMember(settings => settings.DisplayCustomerCurrencyOnOrders, options => options.Ignore())
             .ForMember(settings => settings.ReturnRequestsFileMaximumSize, options => options.Ignore())
             .ForMember(settings => settings.DisplayOrderSummary, options => options.Ignore())
-            .ForMember(settings => settings.PlaceOrderWithLock, options => options.Ignore());
+            .ForMember(settings => settings.PlaceOrderWithLock, options => options.Ignore())
+            .ForMember(settings => settings.CustomerOrdersPageSize, options => options.Ignore());
 
         CreateMap<ReturnRequestAction, ReturnRequestActionModel>();
         CreateMap<ReturnRequestActionModel, ReturnRequestAction>();
@@ -1675,7 +1671,10 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
             .ForMember(model => model.TaxBasedOn_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.TaxCategories, options => options.Ignore())
             .ForMember(model => model.TaxDisplayTypeValues, options => options.Ignore())
-            .ForMember(model => model.TaxDisplayType_OverrideForStore, options => options.Ignore());
+            .ForMember(model => model.TaxDisplayType_OverrideForStore, options => options.Ignore())
+            .ForMember(model => model.HmrcApiUrl_OverrideForStore, options => options.Ignore())
+            .ForMember(model => model.HmrcClientId_OverrideForStore, options => options.Ignore())
+            .ForMember(model => model.HmrcClientSecret_OverrideForStore, options => options.Ignore());
         CreateMap<TaxSettingsModel, TaxSettings>()
             .ForMember(settings => settings.ActiveTaxProviderSystemName, options => options.Ignore())
             .ForMember(settings => settings.LogErrors, options => options.Ignore());

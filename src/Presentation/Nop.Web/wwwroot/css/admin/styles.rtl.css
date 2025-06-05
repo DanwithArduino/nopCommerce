@@ -788,6 +788,11 @@ i.false-icon {
 .select2-blue {
   width: 100%;
 }
+
+.card-search .select2-blue {
+  max-width: 425px;
+}
+
 .select2-blue .select2-container--default .select2-selection--single {
   height: 38px;
 }
@@ -1920,6 +1925,10 @@ div.dt-container .data-tables-refresh > div {
 
 .table-striped tbody tr:nth-of-type(odd) {
   background-color: white;
+}
+
+.table .preview img {
+    max-width: 100%;
 }
 
 tr.even {
