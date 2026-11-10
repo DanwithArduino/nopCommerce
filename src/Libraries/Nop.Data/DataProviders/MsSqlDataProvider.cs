@@ -20,11 +20,9 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     /// Gets the connection string builder
     /// </summary>
     /// <returns>The connection string builder</returns>
-    protected static SqlConnectionStringBuilder GetConnectionStringBuilder()
+    protected virtual SqlConnectionStringBuilder GetConnectionStringBuilder()
     {
-        var connectionString = DataSettingsManager.LoadSettings().ConnectionString;
-
-        return new SqlConnectionStringBuilder(connectionString);
+        return new SqlConnectionStringBuilder(DataSettings.ConnectionString);
     }
 
     /// <summary>
@@ -36,7 +34,7 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     {
         ArgumentException.ThrowIfNullOrEmpty(connectionString);
 
-        return new SqlConnection(connectionString);
+        return new SqlConnection(connectionString){};
     }
 
     #endregion
@@ -46,9 +44,8 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     /// <summary>
     /// Create the database
     /// </summary>
-    /// <param name="collation">Collation</param>
     /// <param name="triesToConnect">Count of tries to connect to the database after creating; set 0 if no need to connect after creating</param>
-    public void CreateDatabase(string collation, int triesToConnect = 10)
+    public virtual void CreateDatabase(int triesToConnect = 10)
     {
         if (DatabaseExists())
             return;
@@ -64,8 +61,8 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
         using (var connection = GetInternalDbConnection(builder.ConnectionString))
         {
             var query = $"CREATE DATABASE [{databaseName}]";
-            if (!string.IsNullOrWhiteSpace(collation))
-                query = $"{query} COLLATE {collation}";
+            if (!string.IsNullOrWhiteSpace(DataSettings.Collation))
+                query = $"{query} COLLATE {DataSettings.Collation}";
 
             var command = connection.CreateCommand();
             command.CommandText = query;
@@ -101,11 +98,11 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     /// A task that represents the asynchronous operation
     /// The task result contains the returns true if the database exists.
     /// </returns>
-    public async Task<bool> DatabaseExistsAsync()
+    public virtual async Task<bool> DatabaseExistsAsync()
     {
         try
         {
-            await using var connection = GetInternalDbConnection(GetCurrentConnectionString());
+            await using var connection = GetInternalDbConnection(DataSettings.ConnectionString);
 
             //just try to connect
             await connection.OpenAsync();
@@ -122,11 +119,11 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     /// Checks if the specified database exists, returns true if database exists
     /// </summary>
     /// <returns>Returns true if the database exists.</returns>
-    public bool DatabaseExists()
+    public virtual bool DatabaseExists()
     {
         try
         {
-            using var connection = GetInternalDbConnection(GetCurrentConnectionString());
+            using var connection = GetInternalDbConnection(DataSettings.ConnectionString);
             //just try to connect
             connection.Open();
 
@@ -148,7 +145,9 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     {
         var table = (ITable<TEntity>)base.GetTable<TEntity>();
 
-        return DataSettingsManager.UseNoLock() ? table.With("NOLOCK") : table;
+        return DataSettings.DataProvider == DataProviderType.SqlServer && DataSettings.WithNoLock
+            ? table.With("NOLOCK")
+            : table;
     }
 
     /// <summary>
@@ -195,7 +194,8 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     public virtual async Task BackupDatabaseAsync(string fileName)
     {
         using var currentConnection = CreateDataConnection();
-        var commandText = $"BACKUP DATABASE [{currentConnection.Connection.Database}] TO DISK = '{fileName}' WITH FORMAT";
+        
+        var commandText = $"BACKUP DATABASE [{GetConnectionStringBuilder().InitialCatalog}] TO DISK = '{fileName}' WITH FORMAT";
         await currentConnection.ExecuteAsync(commandText);
     }
 
@@ -221,7 +221,7 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
             "BEGIN\n" +
             "RAISERROR (@ErrorMessage, 16, 1)\n" +
             "END",
-            currentConnection.Connection.Database,
+            GetConnectionStringBuilder().InitialCatalog,
             backupFileName);
 
         await currentConnection.ExecuteAsync(commandText);
@@ -238,7 +238,7 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
                     DECLARE @TableName sysname 
                     DECLARE cur_reindex CURSOR FOR
                     SELECT table_name
-                    FROM [{currentConnection.Connection.Database}].INFORMATION_SCHEMA.TABLES
+                    FROM [{GetConnectionStringBuilder().InitialCatalog}].INFORMATION_SCHEMA.TABLES
                     WHERE table_type = 'base table'
                     OPEN cur_reindex
                     FETCH NEXT FROM cur_reindex INTO @TableName
@@ -260,7 +260,22 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     public virtual async Task ShrinkDatabaseAsync()
     {
         using var currentConnection = CreateDataConnection();
-        await currentConnection.ExecuteAsync($"DBCC SHRINKDATABASE ({currentConnection.Connection.Database});");
+        await currentConnection.ExecuteAsync($"DBCC SHRINKDATABASE ([{GetConnectionStringBuilder().InitialCatalog}]);");
+    }
+
+    /// <summary>
+    /// Gets the database size in Kb
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the database size
+    /// </returns>
+    public virtual async Task<long> GetDatabaseSizeAsync()
+    {
+        using var currentConnection = CreateDataConnection();
+        var result = await currentConnection.QueryToListAsync<long>("SELECT dbSize = SUM(size) * 8 FROM sys.master_files WITH(NOWAIT) WHERE database_id = DB_ID() GROUP BY database_id;");
+
+        return result.FirstOrDefault();
     }
 
     /// <summary>
@@ -312,41 +327,6 @@ public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     public virtual string GetIndexName(string targetTable, string targetColumn)
     {
         return $"IX_{targetTable}_{targetColumn}";
-    }
-
-    /// <summary>
-    /// Updates records in table, using values from entity parameter.
-    /// Records to update are identified by match on primary key value from obj value.
-    /// </summary>
-    /// <param name="entities">Entities with data to update</param>
-    /// <typeparam name="TEntity">Entity type</typeparam>
-    /// <returns>A task that represents the asynchronous operation</returns>
-    public override async Task UpdateEntitiesAsync<TEntity>(IEnumerable<TEntity> entities)
-    {
-        using var dataContext = CreateDataConnection();
-        await dataContext.GetTable<TEntity>()
-            .Merge()
-            .Using(entities)
-            .OnTargetKey()
-            .UpdateWhenMatched()
-            .MergeAsync();
-    }
-
-    /// <summary>
-    /// Updates records in table, using values from entity parameter.
-    /// Records to update are identified by match on primary key value from obj value.
-    /// </summary>
-    /// <param name="entities">Entities with data to update</param>
-    /// <typeparam name="TEntity">Entity type</typeparam>
-    public override void UpdateEntities<TEntity>(IEnumerable<TEntity> entities)
-    {
-        using var dataContext = CreateDataConnection();
-        dataContext.GetTable<TEntity>()
-            .Merge()
-            .Using(entities)
-            .OnTargetKey()
-            .UpdateWhenMatched()
-            .Merge();
     }
     
     /// <summary>

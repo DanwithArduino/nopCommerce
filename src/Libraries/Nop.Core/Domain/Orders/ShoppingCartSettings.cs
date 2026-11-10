@@ -28,6 +28,16 @@ public partial class ShoppingCartSettings : ISettings
     public int MaximumWishlistItems { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a customer will be able to use custom wish lists
+    /// </summary>
+    public bool AllowMultipleWishlist { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating maximum number of custom wish lists
+    /// </summary>
+    public int MaximumNumberOfCustomWishlist { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to show product images in the mini-shopping cart block
     /// </summary>
     public bool AllowOutOfStockItemsToBeAddedToWishlist { get; set; }
@@ -114,4 +124,14 @@ public partial class ShoppingCartSettings : ISettings
     /// Gets or sets a value indicating whether a customer will see quantity of attribute values associated to products (when qty > 1)
     /// </summary>
     public bool RenderAssociatedAttributeValueQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether vendor-specific shopping cart is enabled
+    /// </summary>
+    public bool VendorEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a vendor is required for the shopping cart
+    /// </summary>
+    public bool VendorRequired { get; set; }
 }

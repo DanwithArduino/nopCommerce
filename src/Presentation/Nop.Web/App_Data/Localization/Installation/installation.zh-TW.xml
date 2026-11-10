@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Language Name="繁體中文" IsDefault="false" IsRightToLeft="false">
   <LocaleResource Name="AdminEmail">
     <Value>管理員電郵</Value>
@@ -11,6 +11,15 @@
   </LocaleResource>
   <LocaleResource Name="AdminPasswordRequired">
     <Value>請輸入管理員密碼</Value>
+  </LocaleResource>
+  <LocaleResource Name="CharacterSet">
+    <Value>字元集</Value>
+  </LocaleResource>
+  <LocaleResource Name="Collation">
+    <Value>字元序</Value>
+  </LocaleResource>
+  <LocaleResource Name="CollationRequired">
+    <Value>需要整理</Value>
   </LocaleResource>
   <LocaleResource Name="ConfigureDirectoryPermissions">
     <Value>帳號{0}沒有修改文件夾{1}的權限，請重新配置權限</Value>
@@ -93,6 +102,24 @@
   <LocaleResource Name="PostgreSQL">
     <Value>PostgreSQL</Value>
   </LocaleResource>
+  <LocaleResource Name="Progress.CheckPermissions">
+    <Value>正在檢查權限……</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CreateDatabase">
+    <Value>正在建立資料庫……</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InitializeDatabase">
+    <Value>正在初始化資料庫……</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InsertData">
+    <Value>正在插入數據……</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.PreparePlugins">
+    <Value>正在準備外掛程式……</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.RegionalResources">
+    <Value>正在套用區域設定……</Value>
+  </LocaleResource>
   <LocaleResource Name="RawConnectionString">
     <Value>輸入原始鏈接字符串(高級)</Value>
   </LocaleResource>
@@ -133,7 +160,7 @@
     <Value>商店資訊</Value>
   </LocaleResource>
   <LocaleResource Name="SubscribeNewsletters">
-    <Value>Subscribe to nopCommerce newsletter</Value>
+    <Value>訂閱 nopCommerce 電子報</Value>
   </LocaleResource>
   <LocaleResource Name="Title">
     <Value>nopCommerce安裝</Value>

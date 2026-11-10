@@ -208,7 +208,7 @@ public partial interface IPictureService
     /// <param name="fileName">Name of file</param>
     /// <returns>
     /// A task that represents the asynchronous operation
-    /// The task result contains the picture binary or throws an exception
+    /// The task result contains the picture binary or throws a <see cref="NopException"/>
     /// </returns>
     Task<byte[]> ValidatePictureAsync(byte[] pictureBinary, string mimeType, string fileName);
 
@@ -224,6 +224,13 @@ public partial interface IPictureService
     /// <param name="isStoreInDb">A value indicating whether the images should be stored in data base</param>
     /// <returns>A task that represents the asynchronous operation</returns>
     Task SetIsStoreInDbAsync(bool isStoreInDb);
+
+    /// <summary>
+    /// Change path to store pictures
+    /// </summary>
+    /// <param name="path">New path</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task ChangePicturesPathAsync(string path);
 
     /// <summary>
     /// Get product picture (for shopping cart and order details pages)

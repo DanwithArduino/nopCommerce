@@ -56,6 +56,7 @@ public partial class ReaderWriteLockDisposable : IDisposable
             return;
 
         if (disposing)
+        {
             switch (_readerWriteLockType)
             {
                 case ReaderWriteLockType.Read:
@@ -68,6 +69,7 @@ public partial class ReaderWriteLockDisposable : IDisposable
                     _rwLock.ExitUpgradeableReadLock();
                     break;
             }
+        }
 
         _disposed = true;
     }
@@ -79,7 +81,7 @@ public partial class ReaderWriteLockDisposable : IDisposable
     /// <summary>
     /// Public implementation of Dispose pattern callable by consumers.
     /// </summary>
-    public void Dispose()
+    public virtual void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);

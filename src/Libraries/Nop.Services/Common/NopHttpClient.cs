@@ -5,6 +5,7 @@ using Nop.Core;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Rss;
+using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
 
@@ -92,6 +93,34 @@ public partial class NopHttpClient
             NopVersion.FULL_VERSION,
             WebUtility.UrlEncode(emailAccount.Email),
             language).ToLowerInvariant();
+
+        return await _httpClient.GetStringAsync(url);
+    }
+
+    /// <summary>
+    /// Check the current store for license terms
+    /// </summary>
+    /// <param name="accepted">Whether the license terms accepted</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the asynchronous task whose result contains the license terms check result
+    /// </returns>
+    public virtual async Task<string> CheckLicenseTermsAsync(bool accepted = false)
+    {
+        var isLocal = _webHelper.IsLocalRequest(_httpContextAccessor.HttpContext.Request);
+        var storeUrl = _webHelper.GetStoreLocation();
+        if (isLocal || storeUrl.Contains("localhost"))
+            return string.Empty;
+
+        var emailAccount = await _emailAccountService.GetEmailAccountByIdAsync(_emailAccountSettings.DefaultEmailAccountId)
+            ?? (await _emailAccountService.GetAllEmailAccountsAsync()).FirstOrDefault();
+        var language = _languageService.GetTwoLetterIsoLanguageName(await _workContext.GetWorkingLanguageAsync());
+        var url = string.Format(NopCommonDefaults.NopLicenseTermsPath,
+            storeUrl,
+            NopVersion.FULL_VERSION,
+            WebUtility.UrlEncode(emailAccount.Email),
+            language,
+            accepted).ToLowerInvariant();
 
         return await _httpClient.GetStringAsync(url);
     }
@@ -185,10 +214,12 @@ public partial class NopHttpClient
     /// A task that represents the asynchronous operation
     /// The task result contains the asynchronous task whose result contains the result string
     /// </returns>
-    public virtual async Task<HttpResponseMessage> SubscribeNewslettersAsync(string email)
+    public virtual async Task<HttpResponseMessage> SubscribeNewsLettersAsync(string email)
     {
         //prepare URL to request
-        var url = string.Format(NopCommonDefaults.NopSubscribeNewslettersPath, WebUtility.UrlEncode(email)).ToLowerInvariant();
+        var url = string.Format(NopCommonDefaults.NopSubscribeNewsLettersPath,
+                WebUtility.UrlEncode(email))
+            .ToLowerInvariant();
 
         return await _httpClient.GetAsync(url);
     }

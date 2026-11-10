@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Language Name="Español" IsDefault="false" IsRightToLeft="false">
   <LocaleResource Name="AdminEmail">
     <Value>Correo electrónico del usuario admin</Value>
@@ -11,6 +11,15 @@
   </LocaleResource>
   <LocaleResource Name="AdminPasswordRequired">
     <Value>Introduzca la contraseña de administrador</Value>
+  </LocaleResource>
+  <LocaleResource Name="CharacterSet">
+    <Value>Juego de caracteres</Value>
+  </LocaleResource>
+  <LocaleResource Name="Collation">
+    <Value>Intercalación</Value>
+  </LocaleResource>
+  <LocaleResource Name="CollationRequired">
+    <Value>Intercalación es requerido</Value>
   </LocaleResource>
   <LocaleResource Name="ConfigureDirectoryPermissions">
     <Value>El '{0}' cuenta no se concede permiso para modificar la carpeta '{1}'. Por favor, configurar estos permisos</Value>
@@ -92,6 +101,24 @@
   </LocaleResource>
   <LocaleResource Name="PostgreSQL">
     <Value>PostgreSQL</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CheckPermissions">
+    <Value>Verificando permisos...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CreateDatabase">
+    <Value>Creando base de datos...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InitializeDatabase">
+    <Value>Inicializando base de datos...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InsertData">
+    <Value>Insertando datos...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.PreparePlugins">
+    <Value>Preparando complementos...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.RegionalResources">
+    <Value>Aplicando configuración regional...</Value>
   </LocaleResource>
   <LocaleResource Name="RawConnectionString">
     <Value>Ingrese la cadena de conexión en bruto (avanzado)</Value>

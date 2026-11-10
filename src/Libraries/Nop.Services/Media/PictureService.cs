@@ -7,10 +7,12 @@ using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Services.Catalog;
 using Nop.Services.Configuration;
+using Nop.Services.Helpers;
 using Nop.Services.Logging;
 using Nop.Services.Seo;
 using SkiaSharp;
 using Svg.Skia;
+using Picture = Nop.Core.Domain.Media.Picture;
 
 namespace Nop.Services.Media;
 
@@ -150,7 +152,7 @@ public partial class PictureService : IPictureService
     /// </returns>
     protected virtual Task<string> GetPictureLocalPathAsync(string fileName)
     {
-        return Task.FromResult(_fileProvider.GetAbsolutePath("images", fileName));
+        return Task.FromResult(_fileProvider.Combine(_fileProvider.GetLocalImagesPath(_mediaSettings), fileName));
     }
 
     /// <summary>
@@ -331,7 +333,7 @@ public partial class PictureService : IPictureService
                 using (var surface = new SKCanvas(bitmap))
                 {
                     surface.RotateDegrees(180, bitmap.Width / 2f, bitmap.Height / 2f);
-                    surface.DrawBitmap(bitmap.Copy(), 0, 0);
+                    surface.DrawBitmap(bitmap.Copy(), 0, 0, SKSamplingOptions.Default);
                 }
                 return bitmap;
             case SKEncodedOrigin.RightTop:
@@ -340,7 +342,7 @@ public partial class PictureService : IPictureService
                 {
                     surface.Translate(rotated.Width, 0);
                     surface.RotateDegrees(90);
-                    surface.DrawBitmap(bitmap, 0, 0);
+                    surface.DrawBitmap(bitmap, 0, 0, SKSamplingOptions.Default);
                 }
                 return rotated;
             case SKEncodedOrigin.LeftBottom:
@@ -349,7 +351,7 @@ public partial class PictureService : IPictureService
                 {
                     surface.Translate(0, rotated.Height);
                     surface.RotateDegrees(270);
-                    surface.DrawBitmap(bitmap, 0, 0);
+                    surface.DrawBitmap(bitmap, 0, 0, SKSamplingOptions.Default);
                 }
                 return rotated;
             default:
@@ -438,14 +440,13 @@ public partial class PictureService : IPictureService
 
         var defaultImageFileName = defaultPictureType switch
         {
-            PictureType.Avatar => await _settingService.GetSettingByKeyAsync("Media.Customer.DefaultAvatarImageName", NopMediaDefaults.DefaultAvatarFileName),
-            _ => await _settingService.GetSettingByKeyAsync("Media.DefaultImageName", NopMediaDefaults.DefaultImageFileName),
+            PictureType.Avatar => NopMediaDefaults.DefaultAvatarFileName,
+            PictureType.Object3d => NopMediaDefaults.Default3dPreviewFileName,
+            _ => NopMediaDefaults.DefaultImageFileName,
         };
         var filePath = await GetPictureLocalPathAsync(defaultImageFileName);
         if (!_fileProvider.FileExists(filePath))
-        {
             return string.Empty;
-        }
 
         if (targetSize == 0)
             return await GetImagesPathUrlAsync(storeLocation) + defaultImageFileName;
@@ -464,7 +465,7 @@ public partial class PictureService : IPictureService
             try
             {
                 using var image = SKBitmap.Decode(filePath);
-                var codec = SKCodec.Create(filePath);
+                using var codec = SKCodec.Create(filePath);
                 var format = codec.EncodedFormat;
                 var pictureBinary = ImageResize(image, format, targetSize);
                 var mimeType = GetMimeTypeFromFileName(thumbFileName);
@@ -850,7 +851,7 @@ public partial class PictureService : IPictureService
         if (string.IsNullOrEmpty(contentType))
             contentType = GetPictureContentTypeByFileExtension(fileExtension);
 
-        if (contentType == MimeTypes.ImageSvg && !_mediaSettings.AllowSVGUploads)
+        if (contentType == MimeTypes.ImageSvg && !_mediaSettings.AllowSvgUploads)
             return null;
 
         var picture = await InsertPictureAsync(await _downloadService.GetDownloadBitsAsync(formFile),
@@ -998,36 +999,53 @@ public partial class PictureService : IPictureService
     /// <param name="fileName">Name of file</param>
     /// <returns>
     /// A task that represents the asynchronous operation
-    /// The task result contains the picture binary or throws an exception
+    /// The task result contains the picture binary or throws a <see cref="NopException"/>
     /// </returns>
-    public virtual async Task<byte[]> ValidatePictureAsync(byte[] pictureBinary, string mimeType, string fileName)
+    public virtual Task<byte[]> ValidatePictureAsync(byte[] pictureBinary, string mimeType, string fileName)
     {
         try
         {
             SKBitmap image;
+            var isSvg = mimeType?.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true;
 
-            if (_mediaSettings.AutoOrientImage)
+            if (isSvg)
             {
                 using var input = new MemoryStream(pictureBinary);
-                using var codec = SKCodec.Create(input);
-                image = AutoOrient(SKBitmap.Decode(codec), codec.EncodedOrigin);
+                using var svg = new SKSvg();
+                svg.Load(input);
+
+                var width = (int)svg.Picture.CullRect.Width;
+                var height = (int)svg.Picture.CullRect.Height;
+
+                image = new SKBitmap(width, height);
+                using var canvas = new SKCanvas(image);
+                canvas.Clear(SKColors.Transparent);
+                canvas.DrawPicture(svg.Picture);
             }
             else
-                image = SKBitmap.Decode(pictureBinary);
+            {
+                if (_mediaSettings.AutoOrientImage)
+                {
+                    using var input = new MemoryStream(pictureBinary);
+                    using var codec = SKCodec.Create(input);
+                    image = AutoOrient(SKBitmap.Decode(codec), codec.EncodedOrigin);
+                }
+                else
+                    image = SKBitmap.Decode(pictureBinary);
+            }
 
             //resize the image in accordance with the maximum size
             if (Math.Max(image.Height, image.Width) <= _mediaSettings.MaximumImageSize)
-                return pictureBinary;
+                return Task.FromResult(pictureBinary);
 
             var format = GetImageFormatByMimeType(mimeType);
             pictureBinary = ImageResize(image, format, _mediaSettings.MaximumImageSize);
 
-            return pictureBinary;
+            return Task.FromResult(pictureBinary);
         }
         catch (Exception exc)
         {
-            await _logger.ErrorAsync($"Cannot decode picture binary (file name: {fileName})", exc);
-            return pictureBinary;
+            throw new NopException($"Cannot decode picture binary (file name: {fileName})", exc);
         }
     }
 
@@ -1149,6 +1167,58 @@ public partial class PictureService : IPictureService
         {
             // ignored
         }
+    }
+
+
+    /// <summary>
+    /// Change path to store pictures
+    /// </summary>
+    /// <param name="path">New path</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task ChangePicturesPathAsync(string path)
+    {
+        var newPath = _fileProvider.GetLocalImagesPath(_mediaSettings, path);
+        _fileProvider.CreateDirectory(newPath);
+
+        var oldPath = _fileProvider.GetLocalImagesPath(_mediaSettings);
+        if (newPath.Equals(oldPath))
+            return;
+
+        var isSubDir = newPath.StartsWith(oldPath);
+
+        var directoriesToDelete = new List<string>();
+        newPath = newPath.TrimEnd('/').TrimEnd('\\');
+
+        foreach (var originalFile in _fileProvider.EnumerateFiles(oldPath, "*.*", false))
+        {
+            if (isSubDir && originalFile.StartsWith(newPath))
+                continue;
+
+            var fileName = originalFile.Replace(oldPath, string.Empty);
+            var newFilePath = _fileProvider.Combine(newPath, fileName);
+            var newDirPath = _fileProvider.GetParentDirectory(newFilePath).TrimEnd('/').TrimEnd('\\');
+
+            var oldDirPath = _fileProvider.GetParentDirectory(originalFile).TrimEnd('/').TrimEnd('\\');
+
+            if (!oldDirPath.Equals(oldPath.TrimEnd('/').TrimEnd('\\')) && !directoriesToDelete.Contains(oldDirPath))
+                directoriesToDelete.Add(oldDirPath);
+
+            if (!newDirPath.Equals(newPath))
+                _fileProvider.CreateDirectory(newDirPath);
+
+            _fileProvider.FileMove(originalFile, newFilePath);
+        }
+
+        if (!newPath.StartsWith(oldPath))
+            _fileProvider.DeleteDirectory(oldPath);
+        else
+        {
+            foreach (var dir in directoriesToDelete.Where(_fileProvider.DirectoryExists))
+                _fileProvider.DeleteDirectory(dir);
+        }
+
+        _mediaSettings.PicturePath = path;
+        await _settingService.SaveSettingAsync(_mediaSettings, settings => settings.PicturePath);
     }
 
     #endregion

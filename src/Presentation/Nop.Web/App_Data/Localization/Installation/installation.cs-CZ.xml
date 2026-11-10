@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Language Name="Česky" IsDefault="false" IsRightToLeft="false">
   <LocaleResource Name="AdminEmail">
     <Value>Email administrátora</Value>
@@ -11,6 +11,15 @@
   </LocaleResource>
   <LocaleResource Name="AdminPasswordRequired">
     <Value>Zadejte heslo administrátora</Value>
+  </LocaleResource>
+  <LocaleResource Name="CharacterSet">
+    <Value>Znaková sada</Value>
+  </LocaleResource>
+  <LocaleResource Name="Collation">
+    <Value>Řazení</Value>
+  </LocaleResource>
+  <LocaleResource Name="CollationRequired">
+    <Value>Je vyžadováno řazení</Value>
   </LocaleResource>
   <LocaleResource Name="ConfigureDirectoryPermissions">
     <Value>Účet '{0}' nemá oprávnění ke změnám ke složce '{1}'. Prosím, nastavte oprávnění.</Value>
@@ -92,6 +101,24 @@
   </LocaleResource>
   <LocaleResource Name="PostgreSQL">
     <Value>PostgreSQL</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CheckPermissions">
+    <Value>Kontrola oprávnění...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CreateDatabase">
+    <Value>Vytváření databáze...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InitializeDatabase">
+    <Value>Inicializace databáze...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InsertData">
+    <Value>Vkládání dat...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.PreparePlugins">
+    <Value>Příprava pluginů...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.RegionalResources">
+    <Value>Aplikace regionálního nastavení...</Value>
   </LocaleResource>
   <LocaleResource Name="RawConnectionString">
     <Value>Zadejte připojovaci řetězec ručně (pro pokročilé)</Value>

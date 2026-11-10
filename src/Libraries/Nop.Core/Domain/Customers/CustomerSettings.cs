@@ -43,16 +43,6 @@ public partial class CustomerSettings : ISettings
     public bool PhoneNumberValidationEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether phone number will be validated using regex (when registering or changing on the 'My Account' page)
-    /// </summary>
-    public bool PhoneNumberValidationUseRegex { get; set; }
-
-    /// <summary>
-    /// Gets or sets a phone number validation rule
-    /// </summary>
-    public string PhoneNumberValidationRule { get; set; }
-
-    /// <summary>
     /// Default password format for customers
     /// </summary>
     public PasswordFormat DefaultPasswordFormat { get; set; }
@@ -186,11 +176,6 @@ public partial class CustomerSettings : ISettings
     /// Gets or sets a value indicating whether 'Newsletter' form field is enabled
     /// </summary>
     public bool NewsletterEnabled { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether 'Newsletter' checkbox is ticked by default on the registration page
-    /// </summary>
-    public bool NewsletterTickedByDefault { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to hide newsletter box

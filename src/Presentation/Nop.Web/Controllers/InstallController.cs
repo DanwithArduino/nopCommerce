@@ -2,13 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
-using Nop.Core;
 using Nop.Core.Caching;
 using Nop.Core.Configuration;
+using Nop.Core.Http;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Data.Configuration;
 using Nop.Services.Common;
+using Nop.Services.Helpers;
 using Nop.Services.Installation;
 using Nop.Services.Plugins;
 using Nop.Services.Security;
@@ -23,10 +24,12 @@ public partial class InstallController : Controller
 {
     #region Fields
 
+    private static InstallProgressInfoModel _installProgressInfoModel;
+
     protected readonly AppSettings _appSettings;
+    protected readonly INopFileProvider _fileProvider;
     protected readonly Lazy<IInstallationLocalizationService> _locService;
     protected readonly Lazy<IInstallationService> _installationService;
-    protected readonly INopFileProvider _fileProvider;
     protected readonly Lazy<IPermissionService> _permissionService;
     protected readonly Lazy<IPluginService> _pluginService;
     protected readonly Lazy<IStaticCacheManager> _staticCacheManager;
@@ -97,7 +100,7 @@ public partial class InstallController : Controller
         {
             model.AvailableLanguages.Add(new SelectListItem
             {
-                Value = Url.RouteUrl("InstallationChangeLanguage", new { language = lang.Code }),
+                Value = Url.RouteUrl(NopRouteNames.Standard.INSTALLATION_CHANGE_LANGUAGE, new { language = lang.Code }),
                 Text = lang.Name,
                 Selected = _locService.Value.GetCurrentLanguage().Code == lang.Code
             });
@@ -120,6 +123,11 @@ public partial class InstallController : Controller
         return model;
     }
 
+    protected virtual void SetProgressMessage(string message)
+    {
+        _installProgressInfoModel = new InstallProgressInfoModel { IsActive = true, ProgressMessage = message };
+    }
+
     #endregion
 
     #region Methods
@@ -127,7 +135,7 @@ public partial class InstallController : Controller
     public virtual IActionResult Index()
     {
         if (DataSettingsManager.IsDatabaseInstalled())
-            return RedirectToRoute("Homepage");
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
 
         var model = new InstallModel
         {
@@ -149,10 +157,19 @@ public partial class InstallController : Controller
     }
 
     [HttpPost]
+    public virtual async Task<IActionResult> Progress()
+    {
+        if (_installProgressInfoModel is null)
+            return Json(new InstallProgressInfoModel { IsActive = false, ProgressMessage = "Not started" });
+
+        return Json(_installProgressInfoModel);
+    }
+
+    [HttpPost]
     public virtual async Task<IActionResult> Index(InstallModel model)
     {
         if (DataSettingsManager.IsDatabaseInstalled())
-            return RedirectToRoute("Homepage");
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
 
         model.DisableSampleDataOption = _appSettings.Get<InstallationConfig>().DisableSampleData;
         model.InstallRegionalResources = _appSettings.Get<InstallationConfig>().InstallRegionalResources;
@@ -168,6 +185,7 @@ public partial class InstallController : Controller
         //If the application is impersonating via <identity impersonate="true"/>, 
         //the identity will be the anonymous user (typically IUSR_MACHINENAME) or the authenticated request user.
 
+        SetProgressMessage(_locService.Value.GetResource("Progress.CheckPermissions"));
         //validate permissions
         var dirsToCheck = _fileProvider.GetDirectoriesWrite();
         foreach (var dir in dirsToCheck)
@@ -201,14 +219,17 @@ public partial class InstallController : Controller
             DataSettingsManager.SaveSettings(new DataConfig
             {
                 DataProvider = model.DataProvider,
-                ConnectionString = connectionString
+                ConnectionString = connectionString,
+                Collation = model.Collation,
+                CharacterSet = model.CharacterSet
             }, _fileProvider);
 
             if (model.CreateDatabaseIfNotExists && !await dataProvider.DatabaseExistsAsync())
             {
                 try
                 {
-                    dataProvider.CreateDatabase(model.Collation);
+                    SetProgressMessage(_locService.Value.GetResource("Progress.CreateDatabase"));
+                    dataProvider.CreateDatabase();
                 }
                 catch (Exception ex)
                 {
@@ -222,6 +243,7 @@ public partial class InstallController : Controller
                     throw new Exception(_locService.Value.GetResource("DatabaseNotExists"));
             }
 
+            SetProgressMessage(_locService.Value.GetResource("Progress.InitializeDatabase"));
             dataProvider.InitializeDatabase();
 
             var cultureInfo = new CultureInfo(NopCommonDefaults.DefaultLanguageCulture);
@@ -230,6 +252,8 @@ public partial class InstallController : Controller
             var languagePackInfo = (DownloadUrl: string.Empty, Progress: 0);
             if (model.InstallRegionalResources)
             {
+                SetProgressMessage(_locService.Value.GetResource("Progress.RegionalResources"));
+
                 //try to get CultureInfo and RegionInfo
                 if (model.Country != null)
                 {
@@ -274,7 +298,7 @@ public partial class InstallController : Controller
             {
                 try
                 {
-                    var resultRequest = await _nopHttpClient.Value.SubscribeNewslettersAsync(model.AdminEmail);
+                    var resultRequest = await _nopHttpClient.Value.SubscribeNewsLettersAsync(model.AdminEmail);
                 }
                 catch
                 {
@@ -282,6 +306,7 @@ public partial class InstallController : Controller
                 }
             }
 
+            SetProgressMessage(_locService.Value.GetResource("Progress.InsertData"));
             //now resolve installation service and install nopCommerce
             await _installationService.Value.InstallAsync(new InstallationSettings
             {
@@ -309,12 +334,11 @@ public partial class InstallController : Controller
                 .OrderBy(pluginDescriptor => pluginDescriptor.Group).ThenBy(pluginDescriptor => pluginDescriptor.DisplayOrder)
                 .ToList();
 
+            SetProgressMessage(_locService.Value.GetResource("Progress.PreparePlugins"));
             foreach (var plugin in plugins)
-            {
                 await _pluginService.Value.PreparePluginToInstallAsync(plugin.SystemName, checkDependencies: false);
-            }
 
-            return View(new InstallModel { RestartUrl = Url.RouteUrl("Homepage") });
+            return View(new InstallModel { RestartUrl = Url.RouteUrl(NopRouteNames.General.HOMEPAGE) });
 
         }
         catch (Exception exception)
@@ -326,6 +350,10 @@ public partial class InstallController : Controller
 
             ModelState.AddModelError(string.Empty, string.Format(_locService.Value.GetResource("SetupFailed"), exception.Message));
         }
+        finally
+        {
+            _installProgressInfoModel = null;
+        }
 
         return View(model);
     }
@@ -333,7 +361,7 @@ public partial class InstallController : Controller
     public virtual IActionResult ChangeLanguage(string language)
     {
         if (DataSettingsManager.IsDatabaseInstalled())
-            return RedirectToRoute("Homepage");
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
 
         _locService.Value.SaveCurrentLanguage(language);
 
@@ -345,15 +373,15 @@ public partial class InstallController : Controller
     public virtual IActionResult RestartInstall()
     {
         if (DataSettingsManager.IsDatabaseInstalled())
-            return RedirectToRoute("Homepage");
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
 
-        return View("Index", new InstallModel { RestartUrl = Url.RouteUrl("Installation") });
+        return View("Index", new InstallModel { RestartUrl = Url.RouteUrl(NopRouteNames.Standard.INSTALLATION) });
     }
 
     public virtual IActionResult RestartApplication()
     {
         if (DataSettingsManager.IsDatabaseInstalled())
-            return RedirectToRoute("Homepage");
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
 
         //restart application
         _webHelper.Value.RestartAppDomain();

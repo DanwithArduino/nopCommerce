@@ -2,8 +2,8 @@
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using Nop.Core.Infrastructure;
+using Ganss.Xss;
 
 namespace Nop.Core;
 
@@ -16,6 +16,37 @@ public partial class CommonHelper
 
     //we use regular expression based on RFC 5322 Official Standard (see https://emailregex.com/)
     private const string EMAIL_EXPRESSION = @"^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|""(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*"")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$";
+
+    const string ALLOWED_TAGS = "br,hr,b,i,u,a,div,ol,ul,li,blockquote,img,span,p,em,strong,font,pre,h1,h2,h3,h4,h5,h6,address,cite,code";
+
+    #endregion
+
+    #region Utilities
+
+    [GeneratedRegex("<.*?>", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlTagRegex();
+
+    /// <summary>
+    /// Checks whether the specified tag is valid
+    /// </summary>
+    /// <param name="tag">Tag to check</param>
+    /// <returns>true if the string is a valid tag and false if it's not</returns>
+    private static bool IsValidTag(string tag)
+    {
+        var aTags = ALLOWED_TAGS.Split(',');
+
+        var endChars = new[] { ' ', '>', '/', '\t' };
+
+        var pos = tag.IndexOfAny(endChars, 1);
+
+        if (pos > 0)
+            tag = tag[..pos];
+
+        if (tag[0] == '/')
+            tag = tag[1..];
+
+        return aTags.Any(aTag => tag == aTag);
+    }
 
     #endregion
 
@@ -40,9 +71,7 @@ public partial class CommonHelper
         output = EnsureMaximumLength(output, 255);
 
         if (!IsValidEmail(output))
-        {
             throw new NopException("Email is not valid.");
-        }
 
         return output;
     }
@@ -117,9 +146,7 @@ public partial class CommonHelper
 
         var result = str[0..(maxLength - pLen)];
         if (!string.IsNullOrEmpty(postfix))
-        {
             result += postfix;
-        }
 
         return result;
     }
@@ -189,8 +216,8 @@ public partial class CommonHelper
         ArgumentNullException.ThrowIfNull(propertyName);
 
         var instanceType = instance.GetType();
-        var pi = instanceType.GetProperty(propertyName) 
-                 ?? throw new NopException("No property '{0}' found on the instance of type '{1}'.", propertyName, instanceType);
+        var pi = instanceType.GetProperty(propertyName)
+            ?? throw new NopException("No property '{0}' found on the instance of type '{1}'.", propertyName, instanceType);
 
         if (!pi.CanWrite)
             throw new NopException("The property '{0}' on the instance of type '{1}' does not have a setter.", propertyName, instanceType);
@@ -274,6 +301,23 @@ public partial class CommonHelper
     }
 
     /// <summary>
+    /// Converts a string from <c>SNAKE_CASE</c> to <c>PascalCase</c>
+    /// </summary>
+    /// <param name="str">Input string</param>
+    /// <returns>Splitted <c>PascalCase</c></returns>
+    public static string SnakeCaseToPascalCase(string str)
+    {
+        if (string.IsNullOrEmpty(str))
+            return string.Empty;
+
+        var tempString = str.ToLower().Replace("_", " ");
+
+        return CultureInfo.InvariantCulture.TextInfo
+            .ToTitleCase(tempString)
+            .Replace(" ", string.Empty);
+    }
+
+    /// <summary>
     /// Get difference in years
     /// </summary>
     /// <param name="startDate"></param>
@@ -304,64 +348,35 @@ public partial class CommonHelper
         DateTime? date = null;
         try
         {
-            date = new DateTime(year.Value, month.Value, day.Value, CultureInfo.CurrentCulture.Calendar);
+            date = new DateTime(year.Value, month.Value, day.Value, CultureInfo.CurrentCulture.DateTimeFormat.Calendar);
         }
         catch { }
         return date;
     }
 
     /// <summary>
-    /// Serialize dictionary of custom values into XML format
+    /// Ensure only allowed HTML tags
     /// </summary>
-    /// <param name="customValues">Custom values</param>
-    /// <returns>XML of custom values</returns>
-    public static string SerializeCustomValuesToXml(IDictionary<string, string> customValues)
+    /// <param name="text">Text</param>
+    /// <returns>Sanitized text with all invalid tags removed</returns>
+    public static string EnsureOnlyAllowedHtml(string text)
     {
-        ArgumentNullException.ThrowIfNull(customValues);
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
 
-        if (!customValues.Any())
-            return null;
+        var m = HtmlTagRegex().Matches(text);
 
-        using var textWriter = new StringWriter();
-
-        var root = new XElement("DictionarySerializer");
-        root.Add(customValues.Select(p => new XElement("item", new XElement("key", p.Key), new XElement("value", p.Value))));
-
-        var document = new XDocument();
-        document.Add(root);
-        document.Save(textWriter, SaveOptions.DisableFormatting);
-
-        var result = textWriter.ToString();
-
-        return result;
-    }
-
-    /// <summary>
-    /// Deserialize XML of custom values into dictionary
-    /// </summary>
-    /// <param name="customValuesXml">XML of custom values</param>
-    /// <returns>Dictionary of custom values</returns>
-    public static Dictionary<string, string> DeserializeCustomValuesFromXml(string customValuesXml)
-    {
-        var dictionary = new Dictionary<string, string>();
-
-        if (string.IsNullOrWhiteSpace(customValuesXml))
-            return dictionary;
-
-        try
+        for (var i = m.Count - 1; i >= 0; i--)
         {
-            using var textReader = new StringReader(customValuesXml);
-            var rootElement = XDocument.Load(textReader).Root;
-            dictionary = rootElement!.Elements("item")
-                .Select(i => new KeyValuePair<string, string>(i.Element("key")!.Value, i.Element("value")!.Value))
-                .ToDictionary();
-        }
-        catch
-        {
-            return dictionary;
+            var tag = text[(m[i].Index + 1)..(m[i].Index + m[i].Length)].Trim().ToLower();
+
+            if (!IsValidTag(tag))
+                text = text.Remove(m[i].Index, m[i].Length);
         }
 
-        return dictionary;
+        var sanitizer = new HtmlSanitizer();
+
+        return sanitizer.Sanitize(text);
     }
 
     #endregion

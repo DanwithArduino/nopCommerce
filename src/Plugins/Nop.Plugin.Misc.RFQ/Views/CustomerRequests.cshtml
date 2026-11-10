@@ -8,7 +8,7 @@
     NopHtml.AddTitleParts(T("Plugins.Misc.RFQ.RequestsQuote").Text);
     NopHtml.AddTitleParts(T("PageTitle.Account").Text);
 
-    NopHtml.AddCssFileParts(@"~/Plugins/Misc.RFQ/Content/styles.css", null);
+    NopHtml.AddCssFileParts("~/Plugins/Misc.RFQ/Content/styles.css", null);
 
     //page class
     NopHtml.AppendPageCssClassParts("html-account-page");
@@ -35,16 +35,16 @@
             @foreach (var request in Model)
             {
                 <div class="section">
-                    <div class="title">
-                        <strong>@string.Format(T("Plugins.Misc.RFQ.RequestQuoteNumber").Text, request.Id)</strong>
+                    <div class="request-header">
+                        <h2 class="request-title">
+                            @string.Format(T("Plugins.Misc.RFQ.RequestQuoteNumber").Text, request.Id)
+                        </h2>
+                        <button type="button" class="button-2" onclick="setLocation('@Url.RouteUrl(RfqDefaults.CreateCustomerRequestRouteName, new { requestId = request.Id })')">@T("Plugins.Misc.RFQ.CustomerRequest.Info")</button>
                     </div>
                     <ul class="info">
                         <li>@T("Plugins.Misc.RFQ.Fields.RequestQuote.CreatedOn"): <span>@request.CreatedOnUtc</span></li>
                         <li>@T("Plugins.Misc.RFQ.Fields.RequestQuote.Status"): <span>@request.Status</span></li>
                     </ul>
-                    <div class="buttons">
-                        <button type="button" class="button-2" onclick="setLocation('@Url.RouteUrl(RfqDefaults.CreateCustomerRequestRouteName, new { requestId = request.Id })')">@T("Plugins.Misc.RFQ.CustomerRequest.Info")</button>
-                    </div>
                 </div>
             }
         }

@@ -38,11 +38,6 @@ public partial class AdminAreaSettings : ISettings
     public bool RichEditorAllowJavaScript { get; set; }
 
     /// <summary>
-    /// A value indicating whether to style tag is supported in rich editor
-    /// </summary>
-    public bool RichEditorAllowStyleTag { get; set; }
-
-    /// <summary>
     /// A value indicating whether to use rich text editor on email messages for customers
     /// </summary>
     public bool UseRichEditorForCustomerEmails { get; set; }
@@ -66,6 +61,11 @@ public partial class AdminAreaSettings : ISettings
     /// Gets or sets title of last news (admin area)
     /// </summary>
     public string LastNewsTitleAdminArea { get; set; }
+
+    /// <summary>
+    /// Gets or sets the license terms details
+    /// </summary>
+    public string LicenseTerms { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to use IsoDateFormat in JSON results (used for avoiding issue with dates in grids)

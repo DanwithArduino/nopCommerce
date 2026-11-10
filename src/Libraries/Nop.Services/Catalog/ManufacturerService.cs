@@ -212,10 +212,12 @@ public partial class ManufacturerService : IManufacturerService
         var manufacturers = _manufacturerRepository.Table;
 
         if (discountId.HasValue)
+        {
             manufacturers = from manufacturer in manufacturers
                 join dmm in _discountManufacturerMappingRepository.Table on manufacturer.Id equals dmm.EntityId
                 where dmm.DiscountId == discountId.Value
                 select manufacturer;
+        }
 
         if (!showHidden)
             manufacturers = manufacturers.Where(manufacturer => !manufacturer.Deleted);
@@ -534,7 +536,7 @@ public partial class ManufacturerService : IManufacturerService
     /// A task that represents the asynchronous operation
     /// The task result contains the result
     /// </returns>
-    public async Task<DiscountManufacturerMapping> GetDiscountAppliedToManufacturerAsync(int manufacturerId, int discountId)
+    public virtual async Task<DiscountManufacturerMapping> GetDiscountAppliedToManufacturerAsync(int manufacturerId, int discountId)
     {
         return await _discountManufacturerMappingRepository.Table
             .FirstOrDefaultAsync(dcm => dcm.EntityId == manufacturerId && dcm.DiscountId == discountId);
@@ -545,7 +547,7 @@ public partial class ManufacturerService : IManufacturerService
     /// </summary>
     /// <param name="discountManufacturerMapping">Discount-manufacturer mapping</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    public async Task InsertDiscountManufacturerMappingAsync(DiscountManufacturerMapping discountManufacturerMapping)
+    public virtual async Task InsertDiscountManufacturerMappingAsync(DiscountManufacturerMapping discountManufacturerMapping)
     {
         await _discountManufacturerMappingRepository.InsertAsync(discountManufacturerMapping);
     }
@@ -555,7 +557,7 @@ public partial class ManufacturerService : IManufacturerService
     /// </summary>
     /// <param name="discountManufacturerMapping">Discount-manufacturer mapping</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    public async Task DeleteDiscountManufacturerMappingAsync(DiscountManufacturerMapping discountManufacturerMapping)
+    public virtual async Task DeleteDiscountManufacturerMappingAsync(DiscountManufacturerMapping discountManufacturerMapping)
     {
         await _discountManufacturerMappingRepository.DeleteAsync(discountManufacturerMapping);
     }

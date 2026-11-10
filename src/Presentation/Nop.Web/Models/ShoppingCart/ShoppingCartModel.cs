@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core.Domain.Catalog;
+using Nop.Services.Orders;
 using Nop.Web.Framework.Models;
 using Nop.Web.Models.Common;
 using Nop.Web.Models.Media;
@@ -18,6 +19,7 @@ public partial record ShoppingCartModel : BaseNopModel
         OrderReviewData = new OrderReviewDataModel();
 
         ButtonPaymentMethodViewComponents = new List<Type>();
+        AvailableVendors = new List<SelectListItem>();
     }
 
     public bool OnePageCheckoutEnabled { get; set; }
@@ -36,6 +38,7 @@ public partial record ShoppingCartModel : BaseNopModel
     public bool TermsOfServiceOnShoppingCartPage { get; set; }
     public bool TermsOfServiceOnOrderConfirmPage { get; set; }
     public bool TermsOfServicePopup { get; set; }
+    public bool ShowItemDiscount { get; set; }
     public DiscountBoxModel DiscountBox { get; set; }
     public GiftCardBoxModel GiftCardBox { get; set; }
     public OrderReviewDataModel OrderReviewData { get; set; }
@@ -44,6 +47,10 @@ public partial record ShoppingCartModel : BaseNopModel
 
     public bool HideCheckoutButton { get; set; }
     public bool ShowVendorName { get; set; }
+
+    public int SelectedVendorId { get; set; }
+    public IList<SelectListItem> AvailableVendors { get; set; }
+    public bool DisplayVendorList { get; set; }
 
     #region Nested Classes
 
@@ -57,41 +64,27 @@ public partial record ShoppingCartModel : BaseNopModel
         }
 
         public string Sku { get; set; }
-
         public string VendorName { get; set; }
-
         public PictureModel Picture { get; set; }
-
         public int ProductId { get; set; }
-
         public string ProductName { get; set; }
-
         public string ProductSeName { get; set; }
-
         public string UnitPrice { get; set; }
         public decimal UnitPriceValue { get; set; }
-
         public string SubTotal { get; set; }
         public decimal SubTotalValue { get; set; }
-
         public string Discount { get; set; }
         public decimal DiscountValue { get; set; }
         public int? MaximumDiscountedQty { get; set; }
-
         public int Quantity { get; set; }
         public List<SelectListItem> AllowedQuantities { get; set; }
-
         public string AttributeInfo { get; set; }
-
         public string RecurringInfo { get; set; }
-
         public string RentalInfo { get; set; }
-
         public bool AllowItemEditing { get; set; }
-
         public bool DisableRemoval { get; set; }
-
         public IList<string> Warnings { get; set; }
+        public int VendorId { get; set; }
     }
 
     public partial record CheckoutAttributeModel : BaseNopEntityModel
@@ -177,7 +170,7 @@ public partial record ShoppingCartModel : BaseNopModel
             BillingAddress = new AddressModel();
             ShippingAddress = new AddressModel();
             PickupAddress = new AddressModel();
-            CustomValues = new Dictionary<string, string>();
+            CustomValues = new CustomValues();
         }
         public bool Display { get; set; }
 
@@ -189,9 +182,11 @@ public partial record ShoppingCartModel : BaseNopModel
         public AddressModel PickupAddress { get; set; }
         public string ShippingMethod { get; set; }
 
+        public string DesiredDeliveryDate { get; set; }
+
         public string PaymentMethod { get; set; }
 
-        public Dictionary<string, string> CustomValues { get; set; }
+        public CustomValues CustomValues { get; set; }
     }
 
     #endregion

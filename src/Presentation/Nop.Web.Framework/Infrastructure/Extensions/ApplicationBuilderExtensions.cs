@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Net;
-using System.Reflection;
 using System.Runtime.ExceptionServices;
 using iTextSharp.text;
 using Microsoft.AspNetCore.Builder;
@@ -17,29 +16,26 @@ using Microsoft.Net.Http.Headers;
 using Nop.Core;
 using Nop.Core.Configuration;
 using Nop.Core.Domain.Common;
-using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
+using Nop.Core.Domain.Media;
 using Nop.Core.Events;
 using Nop.Core.Http;
 using Nop.Core.Infrastructure;
 using Nop.Data;
-using Nop.Data.Migrations;
-using Nop.Services.Authentication;
 using Nop.Services.Common;
+using Nop.Services.Helpers;
 using Nop.Services.Installation;
-using Nop.Services.Localization;
 using Nop.Services.Logging;
-using Nop.Services.Media.RoxyFileman;
-using Nop.Services.Plugins;
-using Nop.Services.ScheduleTasks;
+using Nop.Services.Media;
 using Nop.Services.Security;
 using Nop.Services.Seo;
+using Nop.Services.Themes;
 using Nop.Web.Framework.Globalization;
 using Nop.Web.Framework.Mvc.Routing;
 using Nop.Web.Framework.WebOptimizer;
 using WebMarkupMin.AspNetCoreLatest;
 using WebOptimizer;
-using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
+using IPNetwork = System.Net.IPNetwork;
 
 namespace Nop.Web.Framework.Infrastructure.Extensions;
 
@@ -57,44 +53,16 @@ public static class ApplicationBuilderExtensions
         EngineContext.Current.ConfigureRequestPipeline(application);
     }
 
-    public static async Task StartEngineAsync(this IApplicationBuilder _)
+    /// <summary>
+    /// Publish AppStarted event
+    /// </summary>
+    /// <param name="_">Builder for configuring an application's request pipeline</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public static async Task PublishAppStartedEventAsync(this IApplicationBuilder _)
     {
-        var engine = EngineContext.Current;
-
-        //further actions are performed only when the database is installed
-        if (DataSettingsManager.IsDatabaseInstalled())
-        {
-            //log application start
-            await engine.Resolve<ILogger>().InformationAsync("Application started");
-
-            //install and update plugins
-            var pluginService = engine.Resolve<IPluginService>();
-            await pluginService.InstallPluginsAsync();
-            await pluginService.UpdatePluginsAsync();
-
-            //insert new ACL permission if exists
-            var permissionService = engine.Resolve<IPermissionService>();
-            await permissionService.InsertPermissionsAsync();
-
-            //update nopCommerce core and db
-            var migrationManager = engine.Resolve<IMigrationManager>();
-            var assembly = Assembly.GetAssembly(typeof(ApplicationBuilderExtensions));
-            migrationManager.ApplyUpMigrations(assembly, MigrationProcessType.Update);
-            assembly = Assembly.GetAssembly(typeof(IMigrationManager));
-            migrationManager.ApplyUpMigrations(assembly, MigrationProcessType.Update);
-
-            var taskScheduler = engine.Resolve<ITaskScheduler>();
-            await taskScheduler.InitializeAsync();
-            await taskScheduler.StartSchedulerAsync();
-
-            //clear payment info requests
-            var genericAttributeService = engine.Resolve<IGenericAttributeService>();
-            await genericAttributeService.DeleteAttributesAsync<Customer>(NopCustomerDefaults.ProcessPaymentRequestAttribute);
-
-            //publish AppStartedEvent
-            var eventPublisher = engine.Resolve<IEventPublisher>();
-            await eventPublisher.PublishAsync(new AppStartedEvent());
-        }
+        //publish AppStartedEvent
+        var eventPublisher = EngineContext.Current.Resolve<IEventPublisher>();
+        await eventPublisher.PublishAsync(new AppStartedEvent());
     }
 
     /// <summary>
@@ -300,6 +268,7 @@ public static class ApplicationBuilderExtensions
     {
         var fileProvider = EngineContext.Current.Resolve<INopFileProvider>();
         var appSettings = EngineContext.Current.Resolve<AppSettings>();
+        var mediaSettings = EngineContext.Current.Resolve<MediaSettings>();
 
         void staticFileResponse(StaticFileResponseContext context)
         {
@@ -326,6 +295,14 @@ public static class ApplicationBuilderExtensions
 
         //common static files
         application.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = staticFileResponse });
+
+        //images
+        application.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(fileProvider.GetLocalImagesPath(mediaSettings)),
+            RequestPath = new PathString("/images"),
+            OnPrepareResponse = staticFileResponse
+        });
 
         //themes static files
         application.UseStaticFiles(new StaticFileOptions
@@ -376,15 +353,14 @@ public static class ApplicationBuilderExtensions
             ContentTypeProvider = provider
         });
 
-        if (DataSettingsManager.IsDatabaseInstalled())
+        //add support for 3D objects (GLB files)
+        provider.Mappings[".glb"] = MimeTypes.ModelGlb;
+        application.UseStaticFiles(new StaticFileOptions
         {
-            application.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = EngineContext.Current.Resolve<IRoxyFilemanFileProvider>(),
-                RequestPath = new PathString(NopRoxyFilemanDefaults.DefaultRootDirectory),
-                OnPrepareResponse = staticFileResponse
-            });
-        }
+            FileProvider = new PhysicalFileProvider(fileProvider.Combine(fileProvider.GetLocalImagesPath(mediaSettings), NopMediaDefaults.Default3dObjectsDirectoryName)),
+            RequestPath = new PathString($"/images/3d"),
+            ContentTypeProvider = provider
+        });
 
         if (appSettings.Get<CommonConfig>().ServeUnknownFileTypes)
         {
@@ -407,6 +383,15 @@ public static class ApplicationBuilderExtensions
     }
 
     /// <summary>
+    /// Configure middleware storing the current user theme in the context
+    /// </summary>
+    /// <param name="application">Builder for configuring an application's request pipeline</param>
+    public static void UseThemes(this IApplicationBuilder application)
+    {
+        application.UseMiddleware<ThemesMiddleware>();
+    }
+
+    /// <summary>
     /// Configure middleware checking whether database is installed
     /// </summary>
     /// <param name="application">Builder for configuring an application's request pipeline</param>
@@ -425,7 +410,7 @@ public static class ApplicationBuilderExtensions
         if (!DataSettingsManager.IsDatabaseInstalled())
             return;
 
-        application.UseMiddleware<AuthenticationMiddleware>();
+        application.UseAuthentication();
     }
 
     /// <summary>
@@ -438,11 +423,9 @@ public static class ApplicationBuilderExtensions
 
         var fileProvider = EngineContext.Current.Resolve<INopFileProvider>();
 
-        var fontPaths = fileProvider.EnumerateFiles(fileProvider.MapPath("~/App_Data/Pdf/"), "*.ttf") ?? Enumerable.Empty<string>();
+        var fontPaths = fileProvider.EnumerateFiles(fileProvider.MapPath(NopCommonDefaults.PdfFontDirectoryPath), "*.ttf") ?? Enumerable.Empty<string>();
         foreach (var fp in fontPaths)
-        {
             FontFactory.Register(fp, fileProvider.GetFileNameWithoutExtension(fp));
-        }
     }
 
     /// <summary>
@@ -456,14 +439,14 @@ public static class ApplicationBuilderExtensions
             if (!DataSettingsManager.IsDatabaseInstalled())
                 return;
 
-            var languageService = EngineContext.Current.Resolve<ILanguageService>();
             var localizationSettings = EngineContext.Current.Resolve<LocalizationSettings>();
+            var syncCodeHelper = EngineContext.Current.Resolve<ISyncCodeHelper>();
 
             //prepare supported cultures
-            var cultures = languageService
+            var cultures = syncCodeHelper
                 .GetAllLanguages()
                 .OrderBy(language => language.DisplayOrder)
-                .Select(language => new CultureInfo(language.LanguageCulture))
+                .Select(language => new CultureInfo(language.LanguageCulture) { DateTimeFormat = { Calendar = new GregorianCalendar() } })
                 .ToList();
             options.SupportedCultures = cultures;
             options.SupportedUICultures = cultures;
@@ -524,7 +507,7 @@ public static class ApplicationBuilderExtensions
             if (!string.IsNullOrEmpty(hostingConfig.ForwardedProtoHeaderName))
                 options.ForwardedProtoHeaderName = hostingConfig.ForwardedProtoHeaderName;
 
-            options.KnownNetworks.Clear();
+            options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
 
             if (!string.IsNullOrEmpty(hostingConfig.KnownProxies))
@@ -544,12 +527,12 @@ public static class ApplicationBuilderExtensions
                     if (ipNetParts.Length == 2)
                     {
                         if (IPAddress.TryParse(ipNetParts[0], out var ip) && int.TryParse(ipNetParts[1], out var length))
-                            options.KnownNetworks.Add(new IPNetwork(ip, length));
+                            options.KnownIPNetworks.Add(new IPNetwork(ip, length));
                     }
                 }
             }
 
-            if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
+            if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
                 options.ForwardLimit = null; //disable the limit, because KnownProxies is configured
 
             //configure forwarding

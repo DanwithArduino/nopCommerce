@@ -8,6 +8,7 @@ using Nop.Core;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Infrastructure;
 using Nop.Services.Configuration;
+using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Messages;
@@ -335,7 +336,7 @@ public partial class EmailAccountController : BaseAdminController
         }
     }
 
-    public async Task<IActionResult> AuthReturn(AuthorizationCodeResponseUrl authorizationCode)
+    public virtual async Task<IActionResult> AuthReturn(AuthorizationCodeResponseUrl authorizationCode)
     {
         if (string.IsNullOrEmpty(authorizationCode.State))
             return RedirectToAction(nameof(List));

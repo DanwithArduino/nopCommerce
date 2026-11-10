@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Language Name="मराठी" IsDefault="false" IsRightToLeft="false">
   <LocaleResource Name="AdminEmail">
     <Value>प्रशासन वापरकर्ता ईमेल</Value>
@@ -11,6 +11,15 @@
   </LocaleResource>
   <LocaleResource Name="AdminPasswordRequired">
     <Value>प्रशासक संकेतशब्द प्रविष्ट करा</Value>
+  </LocaleResource>
+  <LocaleResource Name="CharacterSet">
+    <Value>वर्ण संच</Value>
+  </LocaleResource>
+  <LocaleResource Name="Collation">
+    <Value>संकलन</Value>
+  </LocaleResource>
+  <LocaleResource Name="CollationRequired">
+    <Value>संकलन आवश्यक आहे</Value>
   </LocaleResource>
   <LocaleResource Name="ConfigureDirectoryPermissions">
     <Value>फोल्डर '{1}' वर '{0}' खाते सुधारित परवानग्यासह मंजूर केलेले नाही. कृपया या परवानग्या कॉन्फिगर करा.</Value>
@@ -92,6 +101,24 @@
   </LocaleResource>
   <LocaleResource Name="PostgreSQL">
     <Value>PostgreSQL</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CheckPermissions">
+    <Value>परवानग्या तपासत आहे...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.CreateDatabase">
+    <Value>माहिती संच तयार करत आहे...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InitializeDatabase">
+    <Value>माहिती संच प्रारंभ करीत आहे...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.InsertData">
+    <Value>डेटा समाविष्ट करत आहे...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.PreparePlugins">
+    <Value>प्लगइन्स तयार करत आहे...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Progress.RegionalResources">
+    <Value>प्रादेशिक सेटिंग लागू करत आहे...</Value>
   </LocaleResource>
   <LocaleResource Name="RawConnectionString">
     <Value>कच्चा कनेक्शन स्ट्रिंग प्रविष्ट करा (प्रगत)</Value>

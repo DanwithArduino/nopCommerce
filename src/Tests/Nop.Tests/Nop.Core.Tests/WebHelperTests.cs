@@ -1,6 +1,6 @@
-﻿using FluentAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
-using Nop.Core;
+using Nop.Services.Helpers;
 using NUnit.Framework;
 
 namespace Nop.Tests.Nop.Core.Tests;
@@ -130,6 +130,15 @@ public class WebHelperTests : BaseNopTest
     {
         _httpContext.Request.PathBase = "/nopCommercepath";
         _webHelper.ModifyQueryString("/nopCommercepath/Controller/Action", "param1", "value1").Should().Be("/nopCommercepath/Controller/Action?param1=value1");
+        _httpContext.Request.PathBase = string.Empty;
+    }
+
+    [Test]
+    public void CanModifyQueryStringInVirtualDirectoryWhenPathContainsPathBase()
+    {
+        _httpContext.Request.PathBase = "/nopCommercepath";
+        _webHelper.ModifyQueryString("/nopCommercepath/nopCommercepath-category", "param1", "value1").Should().Be("/nopCommercepath/nopCommercepath-category?param1=value1");
+        _webHelper.ModifyQueryString("/nopCommercepath/Controller/nopCommercepath", "param1", "value1").Should().Be("/nopCommercepath/Controller/nopCommercepath?param1=value1");
         _httpContext.Request.PathBase = string.Empty;
     }
 }

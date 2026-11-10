@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.IO.Compression;
-using iTextSharp.text;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
@@ -208,6 +207,11 @@ public partial class PdfService : IPdfService
             addressResult.AddressAttributes = text.Split('\n').ToList();
         }
 
+        //billing address custom values
+        var customValues = new CustomValues();
+        customValues.FillByXml(order.CustomValuesXml, true);
+        addressResult.CustomValues.AddRange(customValues.Where(value => value.DisplayLocation == CustomValueDisplayLocation.BillingAddress));
+
         //vendors payment details
         if (vendor is null)
         {
@@ -216,18 +220,31 @@ public partial class PdfService : IPdfService
             var paymentMethodStr = paymentMethod != null
                 ? await _localizationService.GetLocalizedFriendlyNameAsync(paymentMethod, lang.Id)
                 : order.PaymentMethodSystemName;
-            if (!string.IsNullOrEmpty(paymentMethodStr))
-            {
+            if (!string.IsNullOrEmpty(paymentMethodStr)) 
                 addressResult.PaymentMethod = paymentMethodStr;
-            }
 
-            //custom values
-            var customValues = CommonHelper.DeserializeCustomValuesFromXml(order.CustomValuesXml);
-            if (customValues != null)
-                addressResult.CustomValues = customValues;
+            //payment custom values
+            addressResult.CustomValues.AddRange(customValues.Where(value => value.DisplayLocation == CustomValueDisplayLocation.Payment));
         }
 
         return addressResult;
+    }
+
+    /// <summary>
+    /// Get font information
+    /// </summary>
+    /// <param name="pdfSettings">PDF settings</param>
+    /// <param name="isRtl">Is right-to-left option</param>
+    /// <returns>The name and size of the PDF font</returns>
+    protected virtual (string fontName, float fontSize) GetFontInfo(PdfSettings pdfSettings, bool isRtl)
+    {
+        var fontName = isRtl == true ?
+            !string.IsNullOrEmpty(pdfSettings.RtlFontName) ? pdfSettings.RtlFontName : NopCommonDefaults.PdfRtlFontName :
+            !string.IsNullOrEmpty(pdfSettings.LtrFontName) ? pdfSettings.LtrFontName : NopCommonDefaults.PdfLtrFontName;
+
+        var fontSize = pdfSettings.BaseFontSize >= 0 ? pdfSettings.BaseFontSize : 10;
+
+        return (fontName, fontSize);
     }
 
     /// <summary>
@@ -276,10 +293,8 @@ public partial class PdfService : IPdfService
                 var stateProvince = await _stateProvinceService.GetStateProvinceByAddressAsync(shippingAddress);
                 addressResult.StateProvinceName = stateProvince != null ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Name, lang.Id) : string.Empty;
 
-                if (_addressSettings.CountryEnabled && await _countryService.GetCountryByAddressAsync(shippingAddress) is Country country)
-                {
+                if (_addressSettings.CountryEnabled && await _countryService.GetCountryByAddressAsync(shippingAddress) is Country country) 
                     addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
-                }
 
                 var (addressLine, _) = await _addressService.FormatAddressAsync(shippingAddress, lang.Id);
                 addressResult.AddressLine = addressLine;
@@ -320,7 +335,15 @@ public partial class PdfService : IPdfService
                     addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
             }
 
+            //shipping address custom values
+            var customValues = new CustomValues();
+            customValues.FillByXml(order.CustomValuesXml, true);
+            addressResult.CustomValues.AddRange(customValues.Where(value => value.DisplayLocation == CustomValueDisplayLocation.ShippingAddress));
+
             addressResult.ShippingMethod = order.ShippingMethod;
+
+            //shipping custom values
+            addressResult.CustomValues.AddRange(customValues.Where(value => value.DisplayLocation == CustomValueDisplayLocation.Shipping));
         }
 
         return addressResult;
@@ -575,10 +598,8 @@ public partial class PdfService : IPdfService
             }
         }
 
-        if (displayTax)
-        {
+        if (displayTax) 
             result.Tax = taxStr;
-        }
 
         if (displayTaxRates)
         {
@@ -632,25 +653,6 @@ public partial class PdfService : IPdfService
         result.OrderTotal = await _priceFormatter.FormatPriceAsync(orderTotalInCustomerCurrency, true, order.CustomerCurrencyCode, false, languageId);
 
         return result;
-    }
-
-    /// <summary>
-    /// Resolve font for PDF document
-    /// </summary>
-    /// <param name="language">Language</param>
-    /// <param name="settings">PDF settings</param>
-    /// <returns>A font object</returns>
-    protected virtual Font ResolvePdfFont(Language language, PdfSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-
-        var fontName = language?.Rtl == true
-            ? !string.IsNullOrEmpty(settings.RtlFontName) ? settings.RtlFontName : NopCommonDefaults.PdfRtlFontName
-            : !string.IsNullOrEmpty(settings.LtrFontName) ? settings.LtrFontName : NopCommonDefaults.PdfLtrFontName;
-
-        var fontSize = settings.BaseFontSize >= 0 ? settings.BaseFontSize : 10;
-
-        return PdfDocumentHelper.GetFont(fontName, fontSize);
     }
 
     #endregion
@@ -719,11 +721,14 @@ public partial class PdfService : IPdfService
                 .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
                 .ToList();
 
+        var (fontName, fontSize) = GetFontInfo(pdfSettingsByStore, language.Rtl);
+
         var document = new InvoiceDocument
         {
             StoreUrl = orderStore.Url?.Trim('/'),
             Language = language,
-            Font = ResolvePdfFont(language, pdfSettingsByStore),
+            FontName = fontName,
+            FontSize = fontSize,
             ImageTargetSize = pdfSettingsByStore.ImageTargetSize,
             OrderDateUser = date.ToString("D", new CultureInfo(language.LanguageCulture)),
             LogoData = logo,
@@ -843,12 +848,15 @@ public partial class PdfService : IPdfService
         if (orderItems?.Any() != true)
             return;
 
+        var (fontName, fontSize) = GetFontInfo(pdfSettingsByStore, language.Rtl);
+
         await using var pdfStream = new MemoryStream();
         var document = new ShipmentDocument
         {
             PageSize = pdfSettingsByStore.LetterPageSizeEnabled ? PdfPageSize.Letter : PdfPageSize.A4,
             Language = language,
-            Font = ResolvePdfFont(language, pdfSettingsByStore),
+            FontName = fontName,
+            FontSize = fontSize,
             ImageTargetSize = pdfSettingsByStore.ImageTargetSize,
             ShipmentNumberText = shipment.Id.ToString(),
             OrderNumberText = order.CustomOrderNumber,
@@ -919,7 +927,7 @@ public partial class PdfService : IPdfService
                 {
                     var (pictureUrl, _) = await _pictureService.GetPictureUrlAsync(pic, pdfSettingsByStore.ImageTargetSize, false);
                     var picPath = await _thumbService.GetThumbLocalPathAsync(pictureUrl);
-                    
+
                     if (!string.IsNullOrEmpty(picPath))
                         picturePaths.Add(picPath);
                 }
@@ -930,12 +938,15 @@ public partial class PdfService : IPdfService
             productItems.Add(item);
         }
 
+        var (fontName, fontSize) = GetFontInfo(pdfSettingsByStore, lang.Rtl);
+
         var catalogDocument = new CatalogDocument
         {
             Language = lang,
             ImageTargetSize = pdfSettingsByStore.ImageTargetSize,
             PageSize = pdfSettingsByStore.LetterPageSizeEnabled ? PdfPageSize.Letter : PdfPageSize.A4,
-            Font = ResolvePdfFont(lang, pdfSettingsByStore),
+            FontName = fontName,
+            FontSize = fontSize,
             Products = productItems,
             GetImageAsync = async (string path) =>
             {

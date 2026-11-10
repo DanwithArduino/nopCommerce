@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
-using Nop.Plugin.Misc.Omnisend.Services;
+using Nop.Core.Http;
 using Nop.Services.Common;
 using Nop.Services.Customers;
+using Nop.Services.Helpers;
 using Nop.Web.Framework.Controllers;
 
 namespace Nop.Plugin.Misc.Omnisend.Controllers;
@@ -15,7 +16,6 @@ public class OmnisendController : BasePluginController
     private readonly IGenericAttributeService _genericAttributeService;
     private readonly IWebHelper _webHelper;
     private readonly IWorkContext _workContext;
-    private readonly OmnisendService _omnisendService;
 
     #endregion
 
@@ -24,14 +24,12 @@ public class OmnisendController : BasePluginController
     public OmnisendController(ICustomerService customerService,
         IGenericAttributeService genericAttributeService,
         IWebHelper webHelper,
-        IWorkContext workContext,
-        OmnisendService omnisendService)
+        IWorkContext workContext)
     {
         _customerService = customerService;
         _genericAttributeService = genericAttributeService;
         _webHelper = webHelper;
         _workContext = workContext;
-        _omnisendService = omnisendService;
     }
 
     #endregion
@@ -42,15 +40,13 @@ public class OmnisendController : BasePluginController
     {
         var customer = await _workContext.GetCurrentCustomerAsync();
         if (await _customerService.IsGuestAsync(customer))
-            return RedirectToRoute("Login", new { ReturnUrl = _webHelper.GetRawUrl(Request) });
+            return RedirectToRoute(NopRouteNames.General.LOGIN, new { ReturnUrl = _webHelper.GetRawUrl(Request) });
 
         var customerEmail = await _genericAttributeService.GetAttributeAsync<string>(customer, OmnisendDefaults.CustomerEmailAttribute);
         if (!string.IsNullOrEmpty(customerEmail) && !customerEmail.Equals(customer.Email, StringComparison.InvariantCultureIgnoreCase))
-            return RedirectToRoute("Login", new { ReturnUrl = _webHelper.GetRawUrl(Request) });
+            return RedirectToRoute(NopRouteNames.General.LOGIN, new { ReturnUrl = _webHelper.GetRawUrl(Request) });
 
-        await _omnisendService.RestoreShoppingCartAsync(cartId);
-
-        return RedirectToRoute("ShoppingCart");
+        return RedirectToRoute(NopRouteNames.General.CART);
     }
 
     #endregion

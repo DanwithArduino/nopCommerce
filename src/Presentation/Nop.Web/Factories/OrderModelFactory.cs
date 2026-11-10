@@ -7,9 +7,11 @@ using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Orders;
+using Nop.Core.Domain.Payments;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Tax;
 using Nop.Core.Domain.Vendors;
+using Nop.Core.Http;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
@@ -68,6 +70,7 @@ public partial class OrderModelFactory : IOrderModelFactory
     protected readonly MediaSettings _mediaSettings;
     protected readonly OrderSettings _orderSettings;
     protected readonly PdfSettings _pdfSettings;
+    protected readonly ReturnRequestSettings _returnRequestSettings;
     protected readonly RewardPointsSettings _rewardPointsSettings;
     protected readonly ShippingSettings _shippingSettings;
     protected readonly TaxSettings _taxSettings;
@@ -108,6 +111,7 @@ public partial class OrderModelFactory : IOrderModelFactory
         MediaSettings mediaSettings,
         OrderSettings orderSettings,
         PdfSettings pdfSettings,
+        ReturnRequestSettings returnRequestSettings,
         RewardPointsSettings rewardPointsSettings,
         ShippingSettings shippingSettings,
         TaxSettings taxSettings,
@@ -144,6 +148,7 @@ public partial class OrderModelFactory : IOrderModelFactory
         _mediaSettings = mediaSettings;
         _orderSettings = orderSettings;
         _pdfSettings = pdfSettings;
+        _returnRequestSettings = returnRequestSettings;
         _rewardPointsSettings = rewardPointsSettings;
         _shippingSettings = shippingSettings;
         _taxSettings = taxSettings;
@@ -224,18 +229,23 @@ public partial class OrderModelFactory : IOrderModelFactory
 
         var model = new CustomerOrderListModel
         {
-            AvailableLimits = new SelectList(periods, "ID", "Name", limit.ToString()),
+            AvailableLimits = new SelectList(periods, "ID", "Name", limit.ToString()).ToList(),
             PagerModel = new PagerModel(_localizationService)
             {
                 PageSize = orders.PageSize,
                 TotalRecords = orders.TotalCount,
                 PageIndex = orders.PageIndex,
                 ShowTotalSummary = true,
-                RouteActionName = "CustomerOrdersPaged",
+                RouteActionName = NopRouteNames.Standard.CUSTOMER_ORDERS_PAGED,
                 UseRouteLinks = true,
                 RouteValues = new CustomerOrdersRouteValues { PageNumber = orders.PageIndex, Limit = limit.ToString().ToLower() }
-            }
+            },
+            ReturnItemsButtonText = _returnRequestSettings.UseEuWithdrawalLocales ?
+                await _localizationService.GetResourceAsync("Account.CustomerOrders.WithdrawItems") :
+                await _localizationService.GetResourceAsync("Account.CustomerOrders.ReturnItems")
         };
+
+
 
         foreach (var order in orders)
         {
@@ -313,9 +323,13 @@ public partial class OrderModelFactory : IOrderModelFactory
         {
             Id = order.Id,
             CreatedOn = await _dateTimeHelper.ConvertToUserTimeAsync(order.CreatedOnUtc, DateTimeKind.Utc),
-            OrderStatus = await _localizationService.GetLocalizedEnumAsync(order.OrderStatus),
+            OrderStatus = order.OrderStatus,
+            OrderStatusText = await _localizationService.GetLocalizedEnumAsync(order.OrderStatus),
             IsReOrderAllowed = _orderSettings.IsReOrderAllowed,
             IsReturnRequestAllowed = await _orderProcessingService.IsReturnRequestAllowedAsync(order),
+            ReturnRequestText = _returnRequestSettings.UseEuWithdrawalLocales ?
+                await _localizationService.GetResourceAsync("Order.WithdrawItems") :
+                await _localizationService.GetResourceAsync("Order.ReturnItems"),
             PdfInvoiceDisabled = _pdfSettings.DisablePdfInvoicesForPendingOrders && order.OrderStatus == OrderStatus.Pending,
             CustomOrderNumber = order.CustomOrderNumber,
 
@@ -360,6 +374,9 @@ public partial class OrderModelFactory : IOrderModelFactory
 
             model.ShippingMethod = order.ShippingMethod;
 
+            if (order.ShippingStatus == ShippingStatus.NotYetShipped && order.DesiredDeliveryDateUtc.HasValue)
+                model.DesiredDeliveryDate = (await _dateTimeHelper.ConvertToUserTimeAsync(order.DesiredDeliveryDateUtc.Value, DateTimeKind.Utc)).ToString("D");
+
             //shipments (only already shipped or ready for pickup)
             var shipments = (await _shipmentService.GetShipmentsByOrderIdAsync(order.Id, !order.PickupInStore, order.PickupInStore)).OrderBy(x => x.CreatedOnUtc).ToList();
             foreach (var shipment in shipments)
@@ -395,10 +412,12 @@ public partial class OrderModelFactory : IOrderModelFactory
         var paymentMethod = await _paymentPluginManager
             .LoadPluginBySystemNameAsync(order.PaymentMethodSystemName, customer, order.StoreId);
         model.PaymentMethod = paymentMethod != null ? await _localizationService.GetLocalizedFriendlyNameAsync(paymentMethod, languageId) : order.PaymentMethodSystemName;
+        model.PaymentStatus = order.PaymentStatus;
         model.PaymentMethodStatus = await _localizationService.GetLocalizedEnumAsync(order.PaymentStatus);
         model.CanRePostProcessPayment = await _paymentService.CanRePostProcessPaymentAsync(order);
+
         //custom values
-        model.CustomValues = CommonHelper.DeserializeCustomValuesFromXml(order.CustomValuesXml);
+        model.CustomValues.FillByXml(order.CustomValuesXml, true);
 
         //order subtotal
         if (order.CustomerTaxDisplayType == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal)
@@ -553,6 +572,11 @@ public partial class OrderModelFactory : IOrderModelFactory
             });
         }
 
+        //can user cancel the order
+        model.CanCancelOrder = order.PaymentStatus == PaymentStatus.Pending
+            && order.OrderStatus != OrderStatus.Cancelled
+            && _orderSettings.AllowCustomersCancelOrders;
+
         //purchased products
         model.ShowSku = _catalogSettings.ShowSkuOnProductDetailsPage;
         model.ShowVendorName = _vendorSettings.ShowVendorOnOrderDetailsPage;
@@ -619,9 +643,7 @@ public partial class OrderModelFactory : IOrderModelFactory
                 orderItemModel.LicenseId = orderItem.LicenseDownloadId ?? 0;
 
             if (_orderSettings.ShowProductThumbnailInOrderDetailsPage)
-            {
                 orderItemModel.Picture = await PrepareOrderItemPictureModelAsync(orderItem, _mediaSettings.OrderThumbPictureSize, true, orderItemModel.ProductName);
-            }
         }
 
         return model;
@@ -761,7 +783,7 @@ public partial class OrderModelFactory : IOrderModelFactory
                 TotalRecords = rewardPoints.TotalCount,
                 PageIndex = rewardPoints.PageIndex,
                 ShowTotalSummary = true,
-                RouteActionName = "CustomerRewardPointsPaged",
+                RouteActionName = NopRouteNames.Standard.CUSTOMER_REWARD_POINTS_PAGED,
                 UseRouteLinks = true,
                 RouteValues = new RewardPointsRouteValues { PageNumber = page ?? 0 }
             }
@@ -792,9 +814,7 @@ public partial class OrderModelFactory : IOrderModelFactory
     /// <summary>
     /// record that has only page for route value. Used for (My Account) Reward Points pagination
     /// </summary>
-    public partial record RewardPointsRouteValues : BaseRouteValues
-    {
-    }
+    public partial record RewardPointsRouteValues : BaseRouteValues;
 
     /// <summary>
     /// Record that has filter options for route values. Used for Customer orders pagination (My Account)

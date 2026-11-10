@@ -15,6 +15,7 @@ public partial class ProductAttributeModelFactory : IProductAttributeModelFactor
 {
     #region Fields
 
+    protected readonly IBaseAdminModelFactory _baseAdminModelFactory;
     protected readonly ILocalizationService _localizationService;
     protected readonly ILocalizedModelFactory _localizedModelFactory;
     protected readonly IProductAttributeService _productAttributeService;
@@ -24,11 +25,13 @@ public partial class ProductAttributeModelFactory : IProductAttributeModelFactor
 
     #region Ctor
 
-    public ProductAttributeModelFactory(ILocalizationService localizationService,
+    public ProductAttributeModelFactory(IBaseAdminModelFactory baseAdminModelFactory,
+        ILocalizationService localizationService,
         ILocalizedModelFactory localizedModelFactory,
         IProductAttributeService productAttributeService,
         IProductService productService)
     {
+        _baseAdminModelFactory = baseAdminModelFactory;
         _localizationService = localizationService;
         _localizedModelFactory = localizedModelFactory;
         _productAttributeService = productAttributeService;
@@ -168,6 +171,8 @@ public partial class ProductAttributeModelFactory : IProductAttributeModelFactor
         if (!excludeProperties)
             model.Locales = await _localizedModelFactory.PrepareLocalizedModelsAsync(localizedModelConfiguration);
 
+        await _baseAdminModelFactory.PreparePreTranslationSupportModelAsync(model);
+
         return model;
     }
 
@@ -232,9 +237,7 @@ public partial class ProductAttributeModelFactory : IProductAttributeModelFactor
         {
             //fill in model values from the entity
             if (model == null)
-            {
                 model = productAttributeValue.ToModel<PredefinedProductAttributeValueModel>();
-            }
 
             //define localized model configuration action
             localizedModelConfiguration = async (locale, languageId) =>

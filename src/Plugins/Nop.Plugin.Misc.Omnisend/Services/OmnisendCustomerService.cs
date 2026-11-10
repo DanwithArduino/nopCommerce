@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Routing;
-using Newtonsoft.Json;
-using Nop.Core;
+﻿using Newtonsoft.Json;
 using Nop.Core.Domain.Customers;
 using Nop.Plugin.Misc.Omnisend.DTO;
 using Nop.Plugin.Misc.Omnisend.DTO.Events;
 using Nop.Services.Common;
+using Nop.Services.Helpers;
+using Nop.Web.Framework.Mvc.Routing;
 
 namespace Nop.Plugin.Misc.Omnisend.Services;
 
@@ -17,10 +15,9 @@ public class OmnisendCustomerService
 {
     #region Fields
 
-    private readonly IActionContextAccessor _actionContextAccessor;
     private readonly IAddressService _addressService;
     private readonly IGenericAttributeService _genericAttributeService;
-    private readonly IUrlHelperFactory _urlHelperFactory;
+    private readonly INopUrlHelper _nopUrlHelper;
     private readonly IWebHelper _webHelper;
     private readonly OmnisendHttpClient _httpClient;
 
@@ -28,17 +25,15 @@ public class OmnisendCustomerService
 
     #region Ctor
 
-    public OmnisendCustomerService(IActionContextAccessor actionContextAccessor,
-        IAddressService addressService,
+    public OmnisendCustomerService(IAddressService addressService,
         IGenericAttributeService genericAttributeService,
-        IUrlHelperFactory urlHelperFactory,
+        INopUrlHelper nopUrlHelper,
         IWebHelper webHelper,
         OmnisendHttpClient httpClient)
     {
-        _actionContextAccessor = actionContextAccessor;
         _addressService = addressService;
         _genericAttributeService = genericAttributeService;
-        _urlHelperFactory = urlHelperFactory;
+        _nopUrlHelper = nopUrlHelper;
         _webHelper = webHelper;
         _httpClient = httpClient;
     }
@@ -141,41 +136,10 @@ public class OmnisendCustomerService
             OmnisendDefaults.StoredCustomerShoppingCartIdAttribute);
 
         if (string.IsNullOrEmpty(cartId))
+        {
             await _genericAttributeService.SaveAttributeAsync(customer,
                 OmnisendDefaults.StoredCustomerShoppingCartIdAttribute, await GetCartIdAsync(customer));
-    }
-
-    /// <summary>
-    /// Delete the current shopping cart identifier for customer
-    /// </summary>
-    /// <param name="customer">Customer</param>
-    public async Task DeleteCurrentCustomerShoppingCartIdAsync(Customer customer)
-    {
-        await _genericAttributeService.SaveAttributeAsync<string>(customer,
-            OmnisendDefaults.CurrentCustomerShoppingCartIdAttribute, null);
-    }
-
-    /// <summary>
-    /// Specifies whether to send the delete shopping cart event
-    /// </summary>
-    /// <param name="customer">Customer</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// The task result contains the True if we need to sand delete events</returns>
-    public async Task<bool> IsNeedToSendDeleteShoppingCartEventAsync(Customer customer)
-    {
-        return string.IsNullOrEmpty(await _genericAttributeService.GetAttributeAsync<string>(customer,
-            OmnisendDefaults.StoredCustomerShoppingCartIdAttribute));
-    }
-
-    /// <summary>
-    /// Delete the stored shopping cart identifier for customer
-    /// </summary>
-    /// <param name="customer">Customer</param>
-    public async Task DeleteStoredCustomerShoppingCartIdAsync(Customer customer)
-    {
-        await _genericAttributeService.SaveAttributeAsync<string>(customer,
-            OmnisendDefaults.StoredCustomerShoppingCartIdAttribute, null);
+        }
     }
 
     /// <summary>
@@ -185,11 +149,7 @@ public class OmnisendCustomerService
     /// <returns>The abandoned checkout url</returns>
     public string GetAbandonedCheckoutUrl(string cartId)
     {
-        if (_actionContextAccessor.ActionContext == null)
-            return null;
-
-        return _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext)
-            .RouteUrl(OmnisendDefaults.AbandonedCheckoutRouteName, new { cartId }, _webHelper.GetCurrentRequestProtocol());
+        return _nopUrlHelper.RouteUrl(OmnisendDefaults.AbandonedCheckoutRouteName, new { cartId }, _webHelper.GetCurrentRequestProtocol());
     }
 
     #endregion
